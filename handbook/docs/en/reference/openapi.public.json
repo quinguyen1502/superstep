@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Superstep public API",
-    "description": "Start workflow runs from other services, manage that workflow's schedules, and talk to a published chat.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token acts on one workflow only. A schedule it creates runs as\nthe token's owner.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n\n**Chat API v1** (`/api/public/v1/chat/{slug}`): the published chat page of a workflow. An anonymous visitor is identified\nby a visitor token: send `X-Chat-Visitor: new` once, keep the `visitor_token` of the answer and send it back in\n`X-Chat-Visitor`. Messages are sent over the WebSocket `/ws/public/v1/chat/{slug}`. Clients must ignore fields they do\nnot know: v1 only grows.\n",
+    "description": "Start workflow runs from other services, manage that workflow's schedules, talk to a published chat, and work with Dataset rows.\n\nAuthenticate with a **workflow token** (`wft_…`) in `X-Workflow-Token` or `Authorization: Bearer`. The workflow owner\ncreates tokens in the editor under **⋯ → API**; each token acts on one workflow only. A schedule it creates runs as\nthe token's owner.\n\nEvery response is an envelope: `{\"success\": true, \"data\": …, \"error\": null}` or\n`{\"success\": false, \"data\": null, \"error\": {\"code\", \"message\", \"details\"}}`. `code` is the stable contract.\n\n**Chat API v1** (`/api/public/v1/chat/{slug}`): the published chat page of a workflow. An anonymous visitor is identified\nby a visitor token: send `X-Chat-Visitor: new` once, keep the `visitor_token` of the answer and send it back in\n`X-Chat-Visitor`. Messages are sent over the WebSocket `/ws/public/v1/chat/{slug}`. Clients must ignore fields they do\nnot know: v1 only grows.\n\n**Dataset Connected v1** (`/api/datasets/{dataset_id}/connected`): run row operations with a scoped Dataset token\n(`dsat_…`) issued under **Datasets → Access → Dataset API tokens**.\n",
     "version": "1.2.0"
   },
   "paths": {
@@ -3154,6 +3154,450 @@
           }
         }
       }
+    },
+    "/api/datasets/{dataset_id}/connected": {
+      "post": {
+        "tags": [
+          "Datasets"
+        ],
+        "summary": "Execute a Dataset operation",
+        "operationId": "executeDatasetOperation",
+        "parameters": [
+          {
+            "name": "dataset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Dataset Id"
+            },
+            "description": "ID of the Dataset for which the token was issued."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetConnectedRequest"
+              },
+              "examples": {
+                "find_rows": {
+                  "value": {
+                    "version": 1,
+                    "columns": [
+                      {
+                        "key": "ticket",
+                        "kind": "text",
+                        "unique": true,
+                        "required": true
+                      }
+                    ],
+                    "fields": [
+                      "ticket"
+                    ],
+                    "operation": "find_rows",
+                    "arguments": {
+                      "limit": 10
+                    }
+                  }
+                },
+                "aggregate_rows": {
+                  "value": {
+                    "version": 1,
+                    "columns": [
+                      {
+                        "key": "ticket",
+                        "kind": "text",
+                        "unique": true,
+                        "required": true
+                      }
+                    ],
+                    "fields": [
+                      "ticket"
+                    ],
+                    "operation": "aggregate_rows",
+                    "arguments": {
+                      "summaries": {
+                        "ticket": "count"
+                      }
+                    }
+                  }
+                },
+                "get_row": {
+                  "value": {
+                    "version": 1,
+                    "columns": [
+                      {
+                        "key": "ticket",
+                        "kind": "text",
+                        "unique": true,
+                        "required": true
+                      }
+                    ],
+                    "fields": [
+                      "ticket"
+                    ],
+                    "operation": "get_row",
+                    "arguments": {
+                      "row_id": "row_123"
+                    }
+                  }
+                },
+                "insert_row": {
+                  "value": {
+                    "version": 1,
+                    "columns": [
+                      {
+                        "key": "ticket",
+                        "kind": "text",
+                        "unique": true,
+                        "required": true
+                      }
+                    ],
+                    "fields": [],
+                    "operation": "insert_row",
+                    "arguments": {
+                      "values": {
+                        "ticket": "T-42"
+                      }
+                    },
+                    "operation_id": "import:T-42"
+                  }
+                },
+                "upsert_row": {
+                  "value": {
+                    "version": 1,
+                    "columns": [
+                      {
+                        "key": "ticket",
+                        "kind": "text",
+                        "unique": true,
+                        "required": true
+                      }
+                    ],
+                    "fields": [
+                      "ticket"
+                    ],
+                    "operation": "upsert_row",
+                    "arguments": {
+                      "key": "ticket",
+                      "values": {
+                        "ticket": "T-42"
+                      }
+                    },
+                    "operation_id": "sync:T-42"
+                  }
+                },
+                "delete_row": {
+                  "value": {
+                    "version": 1,
+                    "columns": [
+                      {
+                        "key": "ticket",
+                        "kind": "text",
+                        "unique": true,
+                        "required": true
+                      }
+                    ],
+                    "fields": [
+                      "ticket"
+                    ],
+                    "operation": "delete_row",
+                    "arguments": {
+                      "key": "ticket",
+                      "value": "T-42"
+                    },
+                    "operation_id": "delete:T-42"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The result of the requested Dataset operation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetConnectedEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED, AUTH_TOKEN_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required"
+                      }
+                    }
+                  },
+                  "AUTH_TOKEN_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_TOKEN_INVALID",
+                        "message": "Invalid token"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "DATASET_TOKEN_SCOPE, DATASET_GRANT_DENIED",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "DATASET_TOKEN_SCOPE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_TOKEN_SCOPE",
+                        "message": "The dataset token does not allow this operation"
+                      }
+                    }
+                  },
+                  "DATASET_GRANT_DENIED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_GRANT_DENIED",
+                        "message": "The workflow does not have the required dataset grant"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "DATASET_NODE_ARGUMENTS_INVALID, DATASET_FILTER_INVALID, DATASET_SUMMARY_INVALID, DATASET_UPSERT_KEY_INVALID, DATASET_COLUMN_READ_ONLY, DATASET_COLUMN_RULE_VIOLATION, DATASET_VALUE_INVALID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "DATASET_NODE_ARGUMENTS_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_NODE_ARGUMENTS_INVALID",
+                        "message": "Invalid arguments or binding for the Dataset node"
+                      }
+                    }
+                  },
+                  "DATASET_FILTER_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_FILTER_INVALID",
+                        "message": "Invalid dataset filter for value"
+                      }
+                    }
+                  },
+                  "DATASET_SUMMARY_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_SUMMARY_INVALID",
+                        "message": "Invalid dataset summary for value"
+                      }
+                    }
+                  },
+                  "DATASET_UPSERT_KEY_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_UPSERT_KEY_INVALID",
+                        "message": "Upsert requires a value for the unique field value"
+                      }
+                    }
+                  },
+                  "DATASET_COLUMN_READ_ONLY": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_COLUMN_READ_ONLY",
+                        "message": "Dataset column value is read-only"
+                      }
+                    }
+                  },
+                  "DATASET_COLUMN_RULE_VIOLATION": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_COLUMN_RULE_VIOLATION",
+                        "message": "Value violates the validation rules for value"
+                      }
+                    }
+                  },
+                  "DATASET_VALUE_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_VALUE_INVALID",
+                        "message": "Field value requires a valid number value"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DATASET_ROW_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "DATASET_ROW_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_ROW_NOT_FOUND",
+                        "message": "Dataset row not found"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DATASET_BINDING_SCHEMA_MISMATCH, DATASET_SCHEMA_CONFLICT, DATASET_RECEIPT_CONFLICT, DATASET_UNIQUE_CONFLICT, DATASET_ROW_LIMIT",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "DATASET_BINDING_SCHEMA_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_BINDING_SCHEMA_MISMATCH",
+                        "message": "The connected dataset schema does not match field value"
+                      }
+                    }
+                  },
+                  "DATASET_SCHEMA_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_SCHEMA_CONFLICT",
+                        "message": "The dataset changed. Reload its definition and try again"
+                      }
+                    }
+                  },
+                  "DATASET_RECEIPT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_RECEIPT_CONFLICT",
+                        "message": "The dataset write key was already used with different arguments"
+                      }
+                    }
+                  },
+                  "DATASET_UNIQUE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_UNIQUE_CONFLICT",
+                        "message": "A row already has this unique field value"
+                      }
+                    }
+                  },
+                  "DATASET_ROW_LIMIT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_ROW_LIMIT",
+                        "message": "A dataset can contain at most 5 rows"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "DATASET_ROW_TOO_LARGE, WORKFLOW_TOO_LARGE",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "DATASET_ROW_TOO_LARGE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_ROW_TOO_LARGE",
+                        "message": "A dataset row must be at most 5 bytes"
+                      }
+                    }
+                  },
+                  "WORKFLOW_TOO_LARGE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "WORKFLOW_TOO_LARGE",
+                        "message": "Workflow is too large (max 256 KB)"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Request validation failed"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "description": "Send the explicit binding (`columns`) and field projection (`fields`) with each operation.\nThe server checks current column kinds, requirements, defaults, uniqueness, options, validation rules and Formula definitions.\nInclude keys used in filters, sorts, writes and unique targets in the binding. Search requires a binding for every\nsearchable column. Use flat filters or a filter tree. Aggregate requires its summary and grouping keys in `fields`.\n\n| Operation | Token capability | Result in `data` |\n| --- | --- | --- |\n| `find_rows` | Read | Projected rows, `next_offset`, and `schema_revision`. Omit `arguments` for the first page with defaults. |\n| `aggregate_rows` | Read | Summary groups, `group_by`, and `truncated`. |\n| `get_row` | Read | One projected row. |\n| `insert_row` | Write | `row` and `inserted`. |\n| `upsert_row` | Write | `row` and `inserted`. The unique `key` must have a non-null entry in `values`. |\n| `delete_row` | Allow row deletion (independent of Read and Write) | `row_id` and `deleted`. |\n\nInsert and Upsert with a write-only token require `fields: []`. An empty field list on either operation always returns\nonly the row ID and revision in `row`. Other operations require at least one field.\nKeep `operation_id` and the body identical when retrying Insert, Upsert or Delete. The receipt is scoped to the\ntoken record and survives token rotation. During retention (30 days by default), an exact retry preserves the row ID\nand original insert or delete outcome. A readable write replay sees the current projected row when it exists and\nidentifiers only after deletion. Reusing the identity with different arguments returns `DATASET_RECEIPT_CONFLICT`.\n",
+        "security": [
+          {
+            "DatasetBearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -4170,6 +4614,545 @@
         "title": "ChatTurnsEnvelope",
         "description": "Success envelope: newer turns."
       },
+      "DatasetAggregateGroup": {
+        "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "values": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "type": "object",
+            "title": "Values"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "group",
+          "total",
+          "values"
+        ],
+        "title": "DatasetAggregateGroup"
+      },
+      "DatasetAggregateResult": {
+        "properties": {
+          "group_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,62}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group By"
+          },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetAggregateGroup"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Groups"
+          },
+          "truncated": {
+            "type": "boolean",
+            "title": "Truncated"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "group_by",
+          "groups",
+          "truncated"
+        ],
+        "title": "DatasetAggregateResult"
+      },
+      "DatasetColumnRules": {
+        "additionalProperties": false,
+        "properties": {
+          "min_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Min Length"
+          },
+          "max_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max Length"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Max"
+          },
+          "integer": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Integer"
+          },
+          "domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 253,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Domains"
+          }
+        },
+        "title": "DatasetColumnRules",
+        "type": "object"
+      },
+      "DatasetConnectedColumn": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "number",
+              "boolean",
+              "date",
+              "datetime",
+              "email",
+              "select",
+              "long_text",
+              "url",
+              "created_time",
+              "updated_time",
+              "multi_select",
+              "auto_number"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "unique": {
+            "default": false,
+            "title": "Unique",
+            "type": "boolean"
+          },
+          "default": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Default"
+          },
+          "options": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Options",
+            "type": "array"
+          },
+          "formula": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetFormula"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "validation_rules": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetColumnRules"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "key",
+          "kind"
+        ],
+        "title": "DatasetConnectedColumn",
+        "type": "object"
+      },
+      "DatasetConnectedEnvelope": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "default": true,
+            "examples": [
+              true
+            ]
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetFindResult"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetAggregateResult"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetConnectedRow"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetWriteResult"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetDeleteResult"
+              }
+            ],
+            "title": "Data"
+          },
+          "error": {
+            "type": "null",
+            "title": "Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "DatasetConnectedEnvelope"
+      },
+      "DatasetConnectedRow": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          },
+          "created": {
+            "type": "number",
+            "title": "Created",
+            "description": "Row creation time as Unix seconds."
+          },
+          "updated": {
+            "type": "number",
+            "title": "Updated",
+            "description": "Row update time as Unix seconds."
+          },
+          "values": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "type": "object",
+            "maxProperties": 100,
+            "title": "Values"
+          },
+          "formula_errors": {
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "type": "string"
+              }
+            },
+            "type": "object",
+            "title": "Formula Errors"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "revision",
+          "created",
+          "updated",
+          "values"
+        ],
+        "title": "DatasetConnectedRow"
+      },
+      "DatasetDeleteResult": {
+        "properties": {
+          "row_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Row Id"
+          },
+          "deleted": {
+            "type": "boolean",
+            "const": true,
+            "title": "Deleted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "row_id",
+          "deleted"
+        ],
+        "title": "DatasetDeleteResult"
+      },
+      "DatasetFindResult": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedRow"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "schema_revision": {
+            "type": "integer",
+            "title": "Schema Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "items",
+          "next_offset",
+          "schema_revision"
+        ],
+        "title": "DatasetFindResult"
+      },
+      "DatasetFormula": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "expression": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Expression",
+            "type": "string"
+          }
+        },
+        "required": [
+          "expression"
+        ],
+        "title": "DatasetFormula",
+        "type": "object"
+      },
+      "DatasetRowIdentity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Id"
+          },
+          "revision": {
+            "type": "integer",
+            "title": "Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "revision"
+        ],
+        "title": "DatasetRowIdentity"
+      },
+      "DatasetWriteResult": {
+        "properties": {
+          "row": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetConnectedRow"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetRowIdentity"
+              }
+            ],
+            "title": "Row"
+          },
+          "inserted": {
+            "type": "boolean",
+            "title": "Inserted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "row",
+          "inserted"
+        ],
+        "title": "DatasetWriteResult"
+      },
       "ErrorBody": {
         "properties": {
           "code": {
@@ -5184,6 +6167,886 @@
             "mode": "async"
           }
         ]
+      },
+      "DatasetAggregateQuery": {
+        "additionalProperties": false,
+        "properties": {
+          "filter_mode": {
+            "default": "and",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "title": "Filter Mode",
+            "type": "string"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Search"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetQueryFilter"
+            },
+            "maxItems": 12,
+            "title": "Filters",
+            "type": "array"
+          },
+          "filter_tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetFilterGroup"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "summaries": {
+            "maxProperties": 100,
+            "minProperties": 1,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "enum": [
+                  "count",
+                  "empty_count",
+                  "empty_percent",
+                  "unique_count",
+                  "sum",
+                  "avg",
+                  "min",
+                  "max"
+                ],
+                "type": "string"
+              }
+            },
+            "title": "Summaries",
+            "type": "object"
+          },
+          "group_by": {
+            "anyOf": [
+              {
+                "pattern": "^[a-z][a-z0-9_]{0,62}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Group By"
+          }
+        },
+        "required": [
+          "summaries"
+        ],
+        "title": "DatasetAggregateQuery",
+        "type": "object"
+      },
+      "DatasetConnectedAggregate": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedColumn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operation_id": {
+            "default": null,
+            "title": "Operation Id",
+            "type": "null"
+          },
+          "operation": {
+            "const": "aggregate_rows",
+            "title": "Operation",
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/DatasetAggregateQuery"
+          }
+        },
+        "required": [
+          "version",
+          "columns",
+          "fields",
+          "operation",
+          "arguments"
+        ],
+        "title": "DatasetConnectedAggregate",
+        "type": "object"
+      },
+      "DatasetConnectedDelete": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedColumn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "operation": {
+            "const": "delete_row",
+            "title": "Operation",
+            "type": "string"
+          },
+          "fields": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operation_id": {
+            "pattern": "^[A-Za-z0-9_.:-]{1,128}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "arguments": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetRowTarget"
+              },
+              {
+                "$ref": "#/components/schemas/DatasetUniqueTarget"
+              }
+            ],
+            "title": "Arguments"
+          }
+        },
+        "required": [
+          "version",
+          "columns",
+          "operation",
+          "fields",
+          "operation_id",
+          "arguments"
+        ],
+        "title": "DatasetConnectedDelete",
+        "type": "object"
+      },
+      "DatasetConnectedFind": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedColumn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operation_id": {
+            "default": null,
+            "title": "Operation Id",
+            "type": "null"
+          },
+          "operation": {
+            "const": "find_rows",
+            "title": "Operation",
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/DatasetFindArguments"
+          }
+        },
+        "required": [
+          "version",
+          "columns",
+          "fields",
+          "operation"
+        ],
+        "title": "DatasetConnectedFind",
+        "type": "object"
+      },
+      "DatasetConnectedGet": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedColumn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Fields",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operation_id": {
+            "default": null,
+            "title": "Operation Id",
+            "type": "null"
+          },
+          "operation": {
+            "const": "get_row",
+            "title": "Operation",
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/DatasetRowTarget"
+          }
+        },
+        "required": [
+          "version",
+          "columns",
+          "fields",
+          "operation",
+          "arguments"
+        ],
+        "title": "DatasetConnectedGet",
+        "type": "object"
+      },
+      "DatasetConnectedInsert": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedColumn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Fields",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operation_id": {
+            "pattern": "^[A-Za-z0-9_.:-]{1,128}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "insert_row",
+            "title": "Operation",
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/DatasetInsertArguments"
+          }
+        },
+        "required": [
+          "version",
+          "columns",
+          "fields",
+          "operation_id",
+          "operation",
+          "arguments"
+        ],
+        "title": "DatasetConnectedInsert",
+        "type": "object"
+      },
+      "DatasetConnectedUpsert": {
+        "additionalProperties": false,
+        "properties": {
+          "version": {
+            "const": 1,
+            "title": "Version",
+            "type": "integer"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetConnectedColumn"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "fields": {
+            "items": {
+              "pattern": "^[a-z][a-z0-9_]{0,62}$",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Fields",
+            "type": "array",
+            "uniqueItems": true
+          },
+          "operation_id": {
+            "pattern": "^[A-Za-z0-9_.:-]{1,128}$",
+            "title": "Operation Id",
+            "type": "string"
+          },
+          "operation": {
+            "const": "upsert_row",
+            "title": "Operation",
+            "type": "string"
+          },
+          "arguments": {
+            "$ref": "#/components/schemas/DatasetUpsertArguments"
+          }
+        },
+        "required": [
+          "version",
+          "columns",
+          "fields",
+          "operation_id",
+          "operation",
+          "arguments"
+        ],
+        "title": "DatasetConnectedUpsert",
+        "type": "object"
+      },
+      "DatasetFilterGroup": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "group",
+            "title": "Type",
+            "type": "string"
+          },
+          "conjunction": {
+            "enum": [
+              "and",
+              "or"
+            ],
+            "title": "Conjunction",
+            "type": "string"
+          },
+          "children": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "group": "#/components/schemas/DatasetFilterGroup",
+                  "rule": "#/components/schemas/DatasetFilterRule"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/DatasetFilterRule"
+                },
+                {
+                  "$ref": "#/components/schemas/DatasetFilterGroup"
+                }
+              ]
+            },
+            "title": "Children",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "conjunction",
+          "children"
+        ],
+        "title": "DatasetFilterGroup",
+        "type": "object"
+      },
+      "DatasetFilterRule": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Field",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "lte",
+              "gt",
+              "gte",
+              "contains",
+              "is_null",
+              "not_null",
+              "in",
+              "not_in",
+              "not_contains",
+              "contains_any",
+              "contains_all"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          },
+          "type": {
+            "const": "rule",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "op",
+          "type"
+        ],
+        "title": "DatasetFilterRule",
+        "type": "object"
+      },
+      "DatasetFindArguments": {
+        "additionalProperties": false,
+        "properties": {
+          "filter_mode": {
+            "default": "and",
+            "enum": [
+              "and",
+              "or"
+            ],
+            "title": "Filter Mode",
+            "type": "string"
+          },
+          "search": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Search"
+          },
+          "filters": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetQueryFilter"
+            },
+            "maxItems": 12,
+            "title": "Filters",
+            "type": "array"
+          },
+          "filter_tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetFilterGroup"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "sorts": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetSort"
+            },
+            "maxItems": 12,
+            "title": "Sorts",
+            "type": "array"
+          },
+          "limit": {
+            "default": 50,
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "maximum": 25000,
+            "minimum": 0,
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "title": "DatasetFindArguments",
+        "type": "object"
+      },
+      "DatasetInsertArguments": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "maxProperties": 100,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "values"
+        ],
+        "title": "DatasetInsertArguments",
+        "type": "object"
+      },
+      "DatasetQueryFilter": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Field",
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "lte",
+              "gt",
+              "gte",
+              "contains",
+              "is_null",
+              "not_null",
+              "in",
+              "not_in",
+              "not_contains",
+              "contains_any",
+              "contains_all"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field",
+          "op"
+        ],
+        "title": "DatasetQueryFilter",
+        "type": "object"
+      },
+      "DatasetRowTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "row_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Row Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "row_id"
+        ],
+        "title": "DatasetRowTarget",
+        "type": "object"
+      },
+      "DatasetSort": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Field",
+            "type": "string"
+          },
+          "descending": {
+            "default": false,
+            "title": "Descending",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "DatasetSort",
+        "type": "object"
+      },
+      "DatasetUniqueTarget": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "title": "DatasetUniqueTarget",
+        "type": "object"
+      },
+      "DatasetUpsertArguments": {
+        "additionalProperties": false,
+        "properties": {
+          "values": {
+            "maxProperties": 100,
+            "patternProperties": {
+              "^[a-z][a-z0-9_]{0,62}$": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "title": "Values",
+            "type": "object"
+          },
+          "key": {
+            "pattern": "^[a-z][a-z0-9_]{0,62}$",
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "values",
+          "key"
+        ],
+        "title": "DatasetUpsertArguments",
+        "type": "object"
+      },
+      "DatasetConnectedRequest": {
+        "discriminator": {
+          "mapping": {
+            "aggregate_rows": "#/components/schemas/DatasetConnectedAggregate",
+            "delete_row": "#/components/schemas/DatasetConnectedDelete",
+            "find_rows": "#/components/schemas/DatasetConnectedFind",
+            "get_row": "#/components/schemas/DatasetConnectedGet",
+            "insert_row": "#/components/schemas/DatasetConnectedInsert",
+            "upsert_row": "#/components/schemas/DatasetConnectedUpsert"
+          },
+          "propertyName": "operation"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/DatasetConnectedFind"
+          },
+          {
+            "$ref": "#/components/schemas/DatasetConnectedAggregate"
+          },
+          {
+            "$ref": "#/components/schemas/DatasetConnectedGet"
+          },
+          {
+            "$ref": "#/components/schemas/DatasetConnectedInsert"
+          },
+          {
+            "$ref": "#/components/schemas/DatasetConnectedUpsert"
+          },
+          {
+            "$ref": "#/components/schemas/DatasetConnectedDelete"
+          }
+        ],
+        "title": "DatasetConnectedRequest"
       }
     },
     "securitySchemes": {
@@ -5214,6 +7077,12 @@
         "in": "header",
         "name": "X-Chat-Visitor",
         "description": "Anonymous visitor token, or new to create one."
+      },
+      "DatasetBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "dsat_…",
+        "description": "Dataset API token scoped to one Dataset. Create it in the Dataset's Access tab."
       }
     }
   },
@@ -5225,6 +7094,10 @@
     {
       "name": "Chat",
       "description": "Chat API v1: a published chat page, its chats, files and ratings (anonymous visitor, studio sign-in or a third-party HS256 user token)."
+    },
+    {
+      "name": "Datasets",
+      "description": "Dataset Connected v1: typed row queries and writes with a dataset-scoped token."
     }
   ]
 }

@@ -297,6 +297,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/datasets/{dataset_id}/connected": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute a Dataset operation
+         * @description Send the explicit binding (`columns`) and field projection (`fields`) with each operation.
+         *     The server checks current column kinds, requirements, defaults, uniqueness, options, validation rules and Formula definitions.
+         *     Include keys used in filters, sorts, writes and unique targets in the binding. Search requires a binding for every
+         *     searchable column. Use flat filters or a filter tree. Aggregate requires its summary and grouping keys in `fields`.
+         *
+         *     | Operation | Token capability | Result in `data` |
+         *     | --- | --- | --- |
+         *     | `find_rows` | Read | Projected rows, `next_offset`, and `schema_revision`. Omit `arguments` for the first page with defaults. |
+         *     | `aggregate_rows` | Read | Summary groups, `group_by`, and `truncated`. |
+         *     | `get_row` | Read | One projected row. |
+         *     | `insert_row` | Write | `row` and `inserted`. |
+         *     | `upsert_row` | Write | `row` and `inserted`. The unique `key` must have a non-null entry in `values`. |
+         *     | `delete_row` | Allow row deletion (independent of Read and Write) | `row_id` and `deleted`. |
+         *
+         *     Insert and Upsert with a write-only token require `fields: []`. An empty field list on either operation always returns
+         *     only the row ID and revision in `row`. Other operations require at least one field.
+         *     Keep `operation_id` and the body identical when retrying Insert, Upsert or Delete. The receipt is scoped to the
+         *     token record and survives token rotation. During retention (30 days by default), an exact retry preserves the row ID
+         *     and original insert or delete outcome. A readable write replay sees the current projected row when it exists and
+         *     identifiers only after deletion. Reusing the identity with different arguments returns `DATASET_RECEIPT_CONFLICT`.
+         */
+        post: operations["executeDatasetOperation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -754,6 +793,172 @@ export interface components {
             data: components["schemas"]["ChatTurns"];
             /** Error */
             error?: null;
+        };
+        /** DatasetAggregateGroup */
+        DatasetAggregateGroup: {
+            /** Group */
+            group: string | number | boolean | null;
+            /** Total */
+            total: number;
+            /** Values */
+            values: {
+                [key: string]: string | number | boolean | null;
+            };
+        };
+        /** DatasetAggregateResult */
+        DatasetAggregateResult: {
+            /** Group By */
+            group_by: string | null;
+            /** Groups */
+            groups: components["schemas"]["DatasetAggregateGroup"][];
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** DatasetColumnRules */
+        DatasetColumnRules: {
+            /**
+             * Min Length
+             * @default null
+             */
+            min_length: number | null;
+            /**
+             * Max Length
+             * @default null
+             */
+            max_length: number | null;
+            /**
+             * Min
+             * @default null
+             */
+            min: number | string | null;
+            /**
+             * Max
+             * @default null
+             */
+            max: number | string | null;
+            /**
+             * Integer
+             * @default null
+             */
+            integer: boolean | null;
+            /**
+             * Domains
+             * @default null
+             */
+            domains: string[] | null;
+        };
+        /** DatasetConnectedColumn */
+        DatasetConnectedColumn: {
+            /** Key */
+            key: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "number" | "boolean" | "date" | "datetime" | "email" | "select" | "long_text" | "url" | "created_time" | "updated_time" | "multi_select" | "auto_number";
+            /**
+             * Required
+             * @default false
+             */
+            required: boolean;
+            /**
+             * Unique
+             * @default false
+             */
+            unique: boolean;
+            /**
+             * Default
+             * @default null
+             */
+            default: string | number | boolean | string[] | null;
+            /** Options */
+            options?: string[];
+            /** @default null */
+            formula: components["schemas"]["DatasetFormula"] | null;
+            /** @default null */
+            validation_rules: components["schemas"]["DatasetColumnRules"] | null;
+        };
+        /** DatasetConnectedEnvelope */
+        DatasetConnectedEnvelope: {
+            /**
+             * Success
+             * @default true
+             * @example true
+             */
+            success: boolean;
+            /** Data */
+            data: components["schemas"]["DatasetFindResult"] | components["schemas"]["DatasetAggregateResult"] | components["schemas"]["DatasetConnectedRow"] | components["schemas"]["DatasetWriteResult"] | components["schemas"]["DatasetDeleteResult"];
+            /** Error */
+            error?: null;
+        };
+        /** DatasetConnectedRow */
+        DatasetConnectedRow: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+            /**
+             * Created
+             * @description Row creation time as Unix seconds.
+             */
+            created: number;
+            /**
+             * Updated
+             * @description Row update time as Unix seconds.
+             */
+            updated: number;
+            /** Values */
+            values: {
+                [key: string]: string | number | boolean | string[] | null;
+            };
+            /** Formula Errors */
+            formula_errors?: {
+                [key: string]: string;
+            };
+        };
+        /** DatasetDeleteResult */
+        DatasetDeleteResult: {
+            /** Row Id */
+            row_id: string;
+            /**
+             * Deleted
+             * @constant
+             */
+            deleted: true;
+        };
+        /** DatasetFindResult */
+        DatasetFindResult: {
+            /** Items */
+            items: components["schemas"]["DatasetConnectedRow"][];
+            /** Next Offset */
+            next_offset: number | null;
+            /** Schema Revision */
+            schema_revision: number;
+        };
+        /** DatasetFormula */
+        DatasetFormula: {
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+            /** Expression */
+            expression: string;
+        };
+        /** DatasetRowIdentity */
+        DatasetRowIdentity: {
+            /** Id */
+            id: string;
+            /** Revision */
+            revision: number;
+        };
+        /** DatasetWriteResult */
+        DatasetWriteResult: {
+            /** Row */
+            row: components["schemas"]["DatasetConnectedRow"] | components["schemas"]["DatasetRowIdentity"];
+            /** Inserted */
+            inserted: boolean;
         };
         /** ErrorBody */
         ErrorBody: {
@@ -1250,6 +1455,283 @@ export interface components {
              */
             callback_url?: string | null;
         };
+        /** DatasetAggregateQuery */
+        DatasetAggregateQuery: {
+            /**
+             * Filter Mode
+             * @default and
+             * @enum {string}
+             */
+            filter_mode: "and" | "or";
+            /**
+             * Search
+             * @default null
+             */
+            search: string | null;
+            /** Filters */
+            filters?: components["schemas"]["DatasetQueryFilter"][];
+            /** @default null */
+            filter_tree: components["schemas"]["DatasetFilterGroup"] | null;
+            /** Summaries */
+            summaries: {
+                [key: string]: "count" | "empty_count" | "empty_percent" | "unique_count" | "sum" | "avg" | "min" | "max";
+            };
+            /**
+             * Group By
+             * @default null
+             */
+            group_by: string | null;
+        };
+        /** DatasetConnectedAggregate */
+        DatasetConnectedAggregate: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Columns */
+            columns: components["schemas"]["DatasetConnectedColumn"][];
+            /** Fields */
+            fields: string[];
+            /**
+             * Operation Id
+             * @default null
+             */
+            operation_id: null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "aggregate_rows";
+            arguments: components["schemas"]["DatasetAggregateQuery"];
+        };
+        /** DatasetConnectedDelete */
+        DatasetConnectedDelete: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Columns */
+            columns: components["schemas"]["DatasetConnectedColumn"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "delete_row";
+            /** Fields */
+            fields: string[];
+            /** Operation Id */
+            operation_id: string;
+            /** Arguments */
+            arguments: components["schemas"]["DatasetRowTarget"] | components["schemas"]["DatasetUniqueTarget"];
+        };
+        /** DatasetConnectedFind */
+        DatasetConnectedFind: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Columns */
+            columns: components["schemas"]["DatasetConnectedColumn"][];
+            /** Fields */
+            fields: string[];
+            /**
+             * Operation Id
+             * @default null
+             */
+            operation_id: null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "find_rows";
+            arguments?: components["schemas"]["DatasetFindArguments"];
+        };
+        /** DatasetConnectedGet */
+        DatasetConnectedGet: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Columns */
+            columns: components["schemas"]["DatasetConnectedColumn"][];
+            /** Fields */
+            fields: string[];
+            /**
+             * Operation Id
+             * @default null
+             */
+            operation_id: null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "get_row";
+            arguments: components["schemas"]["DatasetRowTarget"];
+        };
+        /** DatasetConnectedInsert */
+        DatasetConnectedInsert: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Columns */
+            columns: components["schemas"]["DatasetConnectedColumn"][];
+            /** Fields */
+            fields: string[];
+            /** Operation Id */
+            operation_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "insert_row";
+            arguments: components["schemas"]["DatasetInsertArguments"];
+        };
+        /** DatasetConnectedUpsert */
+        DatasetConnectedUpsert: {
+            /**
+             * Version
+             * @constant
+             */
+            version: 1;
+            /** Columns */
+            columns: components["schemas"]["DatasetConnectedColumn"][];
+            /** Fields */
+            fields: string[];
+            /** Operation Id */
+            operation_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            operation: "upsert_row";
+            arguments: components["schemas"]["DatasetUpsertArguments"];
+        };
+        /** DatasetFilterGroup */
+        DatasetFilterGroup: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "group";
+            /**
+             * Conjunction
+             * @enum {string}
+             */
+            conjunction: "and" | "or";
+            /** Children */
+            children: (components["schemas"]["DatasetFilterRule"] | components["schemas"]["DatasetFilterGroup"])[];
+        };
+        /** DatasetFilterRule */
+        DatasetFilterRule: {
+            /** Field */
+            field: string;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "contains" | "is_null" | "not_null" | "in" | "not_in" | "not_contains" | "contains_any" | "contains_all";
+            /**
+             * Value
+             * @default null
+             */
+            value: string | number | boolean | (string | number | boolean | null)[] | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "rule";
+        };
+        /** DatasetFindArguments */
+        DatasetFindArguments: {
+            /**
+             * Filter Mode
+             * @default and
+             * @enum {string}
+             */
+            filter_mode: "and" | "or";
+            /**
+             * Search
+             * @default null
+             */
+            search: string | null;
+            /** Filters */
+            filters?: components["schemas"]["DatasetQueryFilter"][];
+            /** @default null */
+            filter_tree: components["schemas"]["DatasetFilterGroup"] | null;
+            /** Sorts */
+            sorts?: components["schemas"]["DatasetSort"][];
+            /**
+             * Limit
+             * @default 50
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+        };
+        /** DatasetInsertArguments */
+        DatasetInsertArguments: {
+            /** Values */
+            values: {
+                [key: string]: string | number | boolean | string[] | null;
+            };
+        };
+        /** DatasetQueryFilter */
+        DatasetQueryFilter: {
+            /** Field */
+            field: string;
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "eq" | "ne" | "lt" | "lte" | "gt" | "gte" | "contains" | "is_null" | "not_null" | "in" | "not_in" | "not_contains" | "contains_any" | "contains_all";
+            /**
+             * Value
+             * @default null
+             */
+            value: string | number | boolean | (string | number | boolean | null)[] | null;
+        };
+        /** DatasetRowTarget */
+        DatasetRowTarget: {
+            /** Row Id */
+            row_id: string;
+        };
+        /** DatasetSort */
+        DatasetSort: {
+            /** Field */
+            field: string;
+            /**
+             * Descending
+             * @default false
+             */
+            descending: boolean;
+        };
+        /** DatasetUniqueTarget */
+        DatasetUniqueTarget: {
+            /** Key */
+            key: string;
+            /** Value */
+            value: string | number | boolean;
+        };
+        /** DatasetUpsertArguments */
+        DatasetUpsertArguments: {
+            /** Values */
+            values: {
+                [key: string]: string | number | boolean | string[] | null;
+            };
+            /** Key */
+            key: string;
+        };
+        /** DatasetConnectedRequest */
+        DatasetConnectedRequest: components["schemas"]["DatasetConnectedFind"] | components["schemas"]["DatasetConnectedAggregate"] | components["schemas"]["DatasetConnectedGet"] | components["schemas"]["DatasetConnectedInsert"] | components["schemas"]["DatasetConnectedUpsert"] | components["schemas"]["DatasetConnectedDelete"];
     };
     responses: never;
     parameters: never;
@@ -2533,6 +3015,96 @@ export interface operations {
             };
             /** @description RATE_LIMITED */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    executeDatasetOperation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID of the Dataset for which the token was issued. */
+                dataset_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DatasetConnectedRequest"];
+            };
+        };
+        responses: {
+            /** @description The result of the requested Dataset operation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetConnectedEnvelope"];
+                };
+            };
+            /** @description DATASET_NODE_ARGUMENTS_INVALID, DATASET_FILTER_INVALID, DATASET_SUMMARY_INVALID, DATASET_UPSERT_KEY_INVALID, DATASET_COLUMN_READ_ONLY, DATASET_COLUMN_RULE_VIOLATION, DATASET_VALUE_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description AUTH_REQUIRED, AUTH_TOKEN_INVALID */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description DATASET_TOKEN_SCOPE, DATASET_GRANT_DENIED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description DATASET_ROW_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description DATASET_BINDING_SCHEMA_MISMATCH, DATASET_SCHEMA_CONFLICT, DATASET_RECEIPT_CONFLICT, DATASET_UNIQUE_CONFLICT, DATASET_ROW_LIMIT */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description DATASET_ROW_TOO_LARGE, WORKFLOW_TOO_LARGE */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description VALIDATION_ERROR */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
