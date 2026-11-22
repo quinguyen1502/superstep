@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Plan ID: PLAN-0021
-- Status: In progress (scope accepted)
+- Status: Completed
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -32,7 +32,7 @@ Deliver official Dataset integration clients, then authenticated live grid refre
 | 2. Studio realtime | [TASK-0369 — Commit signals and resync](../tasks/done/TASK-0369-dataset-live-invalidations.md) | Milestone 1 | Database revision and authorized push cover every changed writer on SQLite and PostgreSQL, including Redis across processes |
 | 2. Studio realtime | [TASK-0370 — Studio query refresh](../tasks/done/TASK-0370-dataset-live-studio-grid.md) | TASK-0369 | Two browser sessions see the same rows and summaries after writes and reconnect. An editor keeps its draft |
 | 3. Public link | [TASK-0371 — Share authorization and projection](../tasks/done/TASK-0371-dataset-public-share-api.md) | Milestone 2 | Server projection and filter apply to every anonymous read. Revocation, rotation and schema drift fail closed |
-| 3. Public link | [TASK-0372 — Access controls and public viewer](../tasks/backlog/TASK-0372-dataset-public-share-studio.md) | TASK-0371 | Manager preview matches a logged-out viewer, including narrow screens and both themes |
+| 3. Public link | [TASK-0372 — Access controls and public viewer](../tasks/done/TASK-0372-dataset-public-share-studio.md) | TASK-0371 | Manager preview matches a logged-out viewer, including narrow screens and both themes |
 
 ## Delivery
 
@@ -53,3 +53,10 @@ Deliver official Dataset integration clients, then authenticated live grid refre
 ## Completion Criteria
 
 All REQ-0103 scenarios pass with review and QA on develop. The public spec, both SDKs, Studio realtime, and limited public viewer have documented migration and rollback behavior. Record completion evidence after the final milestone.
+
+## Completion Evidence
+
+- Connected v1 schema and both SDKs passed contract drift, live operations, scope, and uncertain-write retry checks. [OpenAPI QA](QA-0356-TASK-0367-dataset-connected-openapi.md) and [SDK QA](QA-0357-TASK-0368-dataset-python-typescript-sdk.md).
+- Authenticated Studio realtime passed revision, Redis, reconnect, conflict, and visibility checks. [Realtime API QA](QA-0358-TASK-0369-dataset-live-invalidations.md) and [Studio realtime QA](QA-0359-TASK-0370-dataset-live-studio-grid.md).
+- Public sharing passed projection, paging, preview parity, rotation, and revocation checks. The integrated browser run used a Connected SDK write, two live Studio sessions, and a guest view on both SQLite and PostgreSQL 17 with Redis 7. [Share API QA](QA-0360-TASK-0371-dataset-public-share-api.md) and [Share Studio QA](QA-0361-TASK-0372-dataset-public-share-studio.md).
+- The owner approved the final milestone in PR #432 on 2026-11-22. Integration is gated on all final PR checks. Package publication and deployment are separate release actions.

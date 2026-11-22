@@ -102,6 +102,25 @@ cả khi có quyền đọc và ghi. Upsert vẫn cho biết đã có dòng mang
 chưa. Nếu điều này cần được giữ kín, hãy dùng **Thêm dòng**. Upsert không đổi giá
 trị nào thì giữ nguyên revision và thời điểm cập nhật của dòng.
 
+### Chia sẻ khung xem chỉ đọc {#share-links}
+
+Người quản lý tập dữ liệu có thể mở **Quyền truy cập → Liên kết chia sẻ →
+Tạo liên kết chia sẻ**, đặt tên cho khung xem và chọn các cột công khai.
+Thêm **Bộ lọc cố định** để giới hạn các dòng được hiển thị. Bộ lọc có thể
+dùng cột riêng tư và vẫn giữ cột đó ngoài khung xem công khai. Chọn
+**Xem trước** để kiểm tra các cột và dòng trước khi tạo liên kết.
+
+Sao chép địa chỉ công khai khi liên kết xuất hiện. Bất kỳ ai có địa chỉ đó
+đều có thể mở khung xem mà không cần tài khoản Superstep. Khách có thể
+chuyển trang và tìm trong các cột văn bản công khai. Các thay đổi của dòng
+khớp bộ lọc sẽ hiển thị vào lần truy cập tiếp theo. Khung xem chỉ có quyền đọc.
+
+**Đổi liên kết** thay thế địa chỉ ngay lập tức và hiển thị địa chỉ mới một lần.
+**Thu hồi liên kết chia sẻ** sẽ xoá quyền truy cập. Lần truy cập tiếp theo qua
+địa chỉ cũ hoặc đã thu hồi sẽ báo liên kết không khả dụng. Một thay đổi
+không tương thích ở cột được dùng cũng có thể vô hiệu hoá liên kết. Khi đó,
+kiểm tra cột và bộ lọc hiện tại, tạo liên kết mới và thu hồi liên kết cũ.
+
 ## CSV {#csv}
 
 **Nhập CSV** xem trước tệp trước khi ghi.
