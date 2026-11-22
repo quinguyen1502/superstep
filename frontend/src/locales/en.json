@@ -389,6 +389,8 @@
     "activeFilterCount_other": "{{count}} active filters",
     "activeSortCount_one": "{{count}} column sorted",
     "activeSortCount_other": "{{count}} columns sorted",
+    "liveDelayed": "Live updates are delayed.",
+    "liveAccessLost": "You no longer have access to this dataset, or it was deleted.",
     "rowsUnavailable": "Rows unavailable.",
     "noRows": "No matching rows.",
     "previousPage": "Previous page",

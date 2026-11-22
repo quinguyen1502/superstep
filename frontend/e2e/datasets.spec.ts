@@ -72,7 +72,7 @@ test('creates a team dataset, edits typed rows, filters and confirms deletion', 
   await create.getByRole('button', { name: 'Create dataset' }).click()
   await expect(page.getByRole('heading', { name: 'Support Tickets' })).toBeVisible()
   const expanded = (await catalog.boundingBox())!.width
-  const datasetEntry = catalog.getByRole('link', { name: 'Support Tickets' })
+  const datasetEntry = catalog.getByRole('link', { name: 'Support Tickets', exact: true })
   await datasetEntry.hover()
   await expect(datasetEntry).not.toHaveAttribute('data-state', /closed|open/)
   await catalog.getByRole('button', { name: 'Collapse dataset list' }).click()
@@ -412,7 +412,7 @@ test('creates a team dataset, edits typed rows, filters and confirms deletion', 
 
   await page.setViewportSize({ width: 390, height: 844 })
   await catalog.getByRole('button', { name: 'Collapse dataset list' }).click()
-  await expect(catalog.getByRole('link', { name: 'Support Tickets' })).toBeHidden()
+  await expect(datasetEntry).toBeHidden()
   await catalog.getByRole('button', { name: 'Expand dataset list' }).click()
   await page.locator('#theme-btn').click()
   await expect(page.locator('html')).toHaveClass(/dark/)

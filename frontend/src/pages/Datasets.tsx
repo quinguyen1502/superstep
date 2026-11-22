@@ -53,10 +53,11 @@ export function DatasetsPage() {
   const editable = can(me, 'resources.manage')
   const confirm = useConfirmDelete()
   const datasetMenu = useRef<HTMLButtonElement>(null)
+  const lostDataset = useRef<string | null>(null)
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
   const [catalog, setCatalog] = useState<DatasetPage<DatasetSummary> | null>(null)
   const [catalogError, setCatalogError] = useState('')
-  const [detailFailure, setDetailFailure] = useState<{ id: string; message: string; missing: boolean } | null>(null)
+  const [detailFailure, setDetailFailure] = useState<{ id: string; message: string; missing: boolean; accessLost?: boolean } | null>(null)
   const [teams, setTeams] = useState<DatasetTeam[] | null>(null)
   const [dataset, setDataset] = useState<Dataset | null>(null)
   const [datasetDialog, setDatasetDialog] = useState<'create' | 'edit' | null>(null)
@@ -78,7 +79,9 @@ export function DatasetsPage() {
   const loadCatalog = useCallback(async (offset = 0) => {
     try {
       const page = await api<DatasetPage<DatasetSummary>>(`${datasetUrl()}?offset=${offset}`)
-      setCatalog(previous => ({ ...page, items: offset ? [...previous?.items ?? [], ...page.items] : page.items }))
+      setCatalog(previous => ({
+        ...page, items: (offset ? [...previous?.items ?? [], ...page.items] : page.items).filter(item => item.id !== lostDataset.current),
+      }))
       setCatalogError('')
     } catch (error) {
       setCatalogError(error instanceof Error ? error.message : t('errors.INTERNAL_ERROR'))
@@ -98,15 +101,42 @@ export function DatasetsPage() {
     setDetailFailure(null)
     setDetailRefresh(current => current + 1)
   }, [])
+  const readDataset = useCallback(async (datasetId: string, signal: AbortSignal) => {
+    const data = await api<Dataset>(datasetUrl(datasetId), { signal })
+    if (!signal.aborted && lostDataset.current !== datasetId) setDataset(previous =>
+      previous?.id === data.id && previous.revision === data.revision ? previous : data)
+    return data
+  }, [])
+  useEffect(() => { lostDataset.current = null }, [id])
   useEffect(() => {
-    let active = true
-    if (id) api<Dataset>(datasetUrl(id))
-      .then(data => { if (active) { setDataset(data); setDetailFailure(null) } })
-      .catch(error => { if (active) { setDataset(null); setDetailFailure({ id, message: error.message, missing: error instanceof ApiError && error.code === 'DATASET_NOT_FOUND' }) } })
-    return () => { active = false }
-  }, [detailRefresh, id])
+    const controller = new AbortController()
+    if (id) void readDataset(id, controller.signal)
+      .then(() => { if (!controller.signal.aborted && lostDataset.current !== id) setDetailFailure(null) })
+      .catch(error => {
+        if (controller.signal.aborted || lostDataset.current === id) return
+        setDataset(null)
+        setDetailFailure({ id, message: error.message, missing: error instanceof ApiError && error.code === 'DATASET_NOT_FOUND' })
+      })
+    return () => controller.abort()
+  }, [detailRefresh, id, readDataset])
+
+  const onAccessLost = useCallback(() => {
+    if (!id) return
+    lostDataset.current = id
+    setDataset(null)
+    setDetailFailure({ id, message: t('dataset.liveAccessLost'), missing: true, accessLost: true })
+    setCatalog(previous => previous && { ...previous, items: previous.items.filter(item => item.id !== id) })
+    setDatasetDialog(null)
+    setColumnDialog(null)
+    setOwnerId(null)
+    setCsv(null)
+    setCsvNotice(null)
+    setCsvError('')
+    setGridFilter(null)
+  }, [id, t])
 
   function saveDataset(data: Dataset) {
+    if (lostDataset.current === data.id) return
     setDatasetDialog(null)
     setDataset(data)
     void loadCatalog()
@@ -219,7 +249,9 @@ export function DatasetsPage() {
           <EmptyHeader>
             <EmptyMedia variant="icon"><SearchX /></EmptyMedia>
             <EmptyTitle>{t('dataset.notFoundTitle')}</EmptyTitle>
-            <EmptyDescription>{t('dataset.notFoundDescription')}</EmptyDescription>
+            <EmptyDescription role={detailFailure?.accessLost ? 'alert' : undefined}>
+              {detailFailure?.accessLost ? detailError : t('dataset.notFoundDescription')}
+            </EmptyDescription>
           </EmptyHeader>
           <EmptyContent><Button asChild variant="outline"><Link to="/datasets">{t('dataset.backToDatasets')}</Link></Button></EmptyContent>
         </Empty>}
@@ -274,7 +306,7 @@ export function DatasetsPage() {
             <TabsContent value="rows">
               <DatasetGrid viewOnlyId={viewOnly ? 'dataset-view-only' : undefined}
                 key={`${current.id}-${gridFilter?.id === current.id ? gridFilter.seq : 0}`} dataset={current} editable={editable}
-                reloadDataset={reloadDataset} initialFilters={gridFilter?.id === current.id ? gridFilter.filters : undefined} />
+                reloadDataset={reloadDataset} readDataset={readDataset} onAccessLost={onAccessLost} initialFilters={gridFilter?.id === current.id ? gridFilter.filters : undefined} />
             </TabsContent>
             <TabsContent value="schema" className="space-y-3 p-4 md:px-6">
               <div className="flex items-center justify-between gap-2">
@@ -331,6 +363,7 @@ export function DatasetsPage() {
       onImportCsv={initial => { setDatasetDialog(null); setCsv({ initial }) }} />}
     {csv && <DatasetCsvDialog dataset={csv.dataset} initial={csv.initial} teams={teams} onClose={() => setCsv(null)}
       onImported={(data, count) => {
+        if (lostDataset.current === data.id) return
         setCsv(null)
         setCsvNotice({ id: data.id, count })
         saveDataset(data)
