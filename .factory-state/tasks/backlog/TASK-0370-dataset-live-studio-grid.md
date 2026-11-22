@@ -48,7 +48,7 @@ Open the stream before the first authoritative snapshot and merge a pending inva
 
 ## Dependencies
 
-- [TASK-0369](../backlog/TASK-0369-dataset-live-invalidations.md). Start after this dependency integrates, or document an approved stack.
+- [TASK-0369](../done/TASK-0369-dataset-live-invalidations.md). Start after this dependency integrates, or document an approved stack.
 
 ## Acceptance Criteria
 

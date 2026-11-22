@@ -10,12 +10,15 @@ from ..core.dataset_formula import FORMULA_KINDS, Formula, FormulaDefinitionErro
 from ..core.dataset_rules import column_display, column_rules, enforce_rules
 from ..core.dataset_types import INVALID_TEXT, MAX_COLUMNS, SYSTEM_TIME_KINDS, normalize_cell
 from ..core.errors import AppError
+from ..core.logging import get_logger
 from ..engine import dataset_nodes
 from ..models.dataset import Dataset, DatasetColumn
 from ..repositories.datasets import DatasetRepository, RowChange
 from .access import AccessService
 from .audit_service import AuditService
+from .notification_hub import NotificationHub, dataset_changes_channel
 
+log = get_logger("datasets")
 MAX_COLUMN_DEFINITIONS = 200  # active plus removed; a removed key stays reserved
 
 
@@ -110,8 +113,25 @@ def _detail(dataset: Dataset) -> dict:
 
 
 class DatasetService:
-    def __init__(self, repo: DatasetRepository, access: AccessService, audit: AuditService):
-        self.repo, self.access, self.audit = repo, access, audit
+    def __init__(self, repo: DatasetRepository, access: AccessService, audit: AuditService,
+                 *, hub: NotificationHub | None = None):
+        self.repo, self.access, self.audit, self.hub = repo, access, audit, hub
+
+    def revisions(self, uid: str, dataset_id: str) -> dict[str, int]:
+        revisions = self.repo.revisions(uid, dataset_id)
+        if revisions is None:
+            raise AppError("DATASET_NOT_FOUND")
+        schema_revision, data_revision = revisions
+        return {"schema_revision": schema_revision, "data_revision": data_revision}
+
+    def notify_changed(self, dataset_id: str) -> None:
+        """Notify after a committed mutation. Readers can recover through the revision endpoint."""
+        if self.hub is None:
+            return
+        try:
+            self.hub.publish(dataset_changes_channel(dataset_id), {"type": "dataset_changed"})
+        except Exception:
+            log.warning("Dataset invalidation publish failed for %s", dataset_id)
 
     def definition(self, uid: str, dataset_id: str) -> Dataset:
         dataset = self.repo.get(uid, dataset_id)
@@ -149,6 +169,7 @@ class DatasetService:
         dataset.updated = time()
         saved, changed = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty,
                                         unique=unique_change, rows=rows, validate_field=validate_field, formulas=formulas)
+        self.notify_changed(dataset.id)
         if rows is not None or formulas is not None:
             details["rows"] = changed
         self.audit.record(uid, action, "dataset", dataset.id, **details)
@@ -197,6 +218,7 @@ class DatasetService:
 
     def create(self, uid: str, *, name: str, description: str | None, team_id: str | None, columns: list[dict]) -> dict:
         dataset = self.repo.add(self.prepare_create(uid, name=name, description=description, team_id=team_id, columns=columns))
+        self.notify_changed(dataset.id)
         self.audit.record(uid, "dataset.create", "dataset", dataset.id)
         return _detail(dataset)
 
@@ -210,6 +232,7 @@ class DatasetService:
     def delete(self, uid: str, dataset_id: str, revision: int) -> dict:
         dataset = self.managed_definition(uid, dataset_id, revision)
         self.repo.delete(uid, dataset.id, dataset.revision)
+        self.notify_changed(dataset.id)
         self.audit.record(uid, "dataset.delete", "dataset", dataset.id)
         return {"ok": True}
 

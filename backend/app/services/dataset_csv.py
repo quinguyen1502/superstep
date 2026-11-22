@@ -228,6 +228,8 @@ class DatasetCsvService:
             raise AppError("DATASET_CSV_ROWS_INVALID", details={"issues": preview["issues"]})
         create = params["dataset_id"] is None
         self.rows.import_rows(uid, dataset, values, create=create)
+        if create or values:
+            self.datasets.notify_changed(dataset.id)
         if create:
             self.datasets.audit.record(uid, "dataset.create", "dataset", dataset.id)
         self.datasets.audit.record(uid, "dataset.csv_import", "dataset", dataset.id, rows=len(values))

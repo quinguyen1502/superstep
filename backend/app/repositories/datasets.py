@@ -69,6 +69,17 @@ class DatasetRepository:
         with self.db.session() as session:
             return session.scalars(query).unique().one_or_none()
 
+    def revisions(self, uid: str, dataset_id: str) -> tuple[int, int] | None:
+        statement = select(Dataset.revision, Dataset.data_revision).where(Dataset.id == dataset_id, self._visible(uid))
+        with self.db.session() as session:
+            row = session.execute(statement).one_or_none()
+            return (row.revision, row.data_revision) if row is not None else None
+
+    @staticmethod
+    def advance_data_revision(session: Session, dataset_id: str) -> None:
+        """Advance the persisted marker under the caller's dataset writer lock."""
+        session.get(Dataset, dataset_id).data_revision += 1
+
     @staticmethod
     def raise_integrity_error(exc: IntegrityError) -> None:
         detail = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
@@ -113,7 +124,9 @@ class DatasetRepository:
             if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
                 raise AppError("DATASET_SCHEMA_HAS_ROWS")
             dataset.revision = revision + 1
-            dataset.auto_number_counter = session.get(Dataset, dataset.id).auto_number_counter
+            current = session.get(Dataset, dataset.id)
+            dataset.auto_number_counter = current.auto_number_counter
+            dataset.data_revision = current.data_revision
             result = session.merge(dataset)
             session.flush()
             changed = 0
@@ -136,6 +149,7 @@ class DatasetRepository:
                     ))
             if validate_field:
                 self._validate_rows(session, result, validate_field)
+            self.advance_data_revision(session, dataset.id)
             self._commit(session)
             return result, changed
 

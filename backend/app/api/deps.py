@@ -3,6 +3,7 @@ from functools import lru_cache
 from urllib.parse import urlparse
 from fastapi import Depends, Request, WebSocket
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from .origin import same_origin
 from ..core import config, security
 from ..engine import activity, embeddings, llm
 from ..core.errors import AppError
@@ -269,7 +270,7 @@ def auto_review_service() -> AutoReviewService:
     return AutoReviewService(ApprovalRepository(db), AutoApprovalService(SettingsRepository(db)), creds.resolve)
 
 def dataset_service() -> DatasetService:
-    return DatasetService(DatasetRepository(get_db()), access_service(), audit_service())
+    return DatasetService(DatasetRepository(get_db()), access_service(), audit_service(), hub=get_notification_hub())
 
 def dataset_row_service() -> DatasetRowService:
     datasets = dataset_service()
@@ -382,12 +383,15 @@ def _same_origin(origin: str | None, host: str | None) -> bool:
     return not origin or urlparse(origin).hostname == (host or "").rsplit(":", 1)[0].strip("[]") or origin in config.cors_origins()
 
 
-def ws_user(ws: WebSocket) -> dict:
-    """WebSocket variant of current_user: ?token= (API clients), else the session cookie from a same-origin page."""
-    token = ws.query_params.get("token")
+def ws_user(ws: WebSocket, *, session_only: bool = False) -> dict:
+    """Check a Studio socket cookie, with optional URL token support for API clients."""
+    token = None if session_only else ws.query_params.get("token")
     if not token and (token := ws.cookies.get(security.SESSION_COOKIE)):
-        if not _same_origin(ws.headers.get("origin"), ws.headers.get("host")): raise AppError("AUTH_CSRF")
-    return _auth().current(token)
+        allowed = same_origin(ws) if session_only else _same_origin(ws.headers.get("origin"), ws.headers.get("host"))
+        if not allowed:
+            raise AppError("AUTH_CSRF")
+    auth = _auth()
+    return auth.current_session(token) if session_only else auth.current(token)
 
 
 def need(permission: str):
