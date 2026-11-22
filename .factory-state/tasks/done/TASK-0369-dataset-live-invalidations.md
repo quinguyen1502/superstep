@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0369
 - Title: Publish authorized Dataset invalidations after writes
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -32,6 +32,9 @@ Add a Dataset-scoped authenticated WebSocket and a cheap persisted data revision
 - [Architecture](../../artifacts/ARCH-0005-dataset-integrations-and-live-sharing.md)
 - [Decision](../../decisions/DEC-0103-dataset-integration-and-sharing-boundaries.md)
 - [Delivery plan](../../artifacts/PLAN-0021-dataset-integrations-and-live-sharing.md)
+- [Review](../../artifacts/REV-0358-TASK-0369-dataset-live-invalidations.md)
+- [QA](../../artifacts/QA-0358-TASK-0369-dataset-live-invalidations.md)
+- [Backend contract and writer matrix](../../../docs/backend-architecture.md#dataset-realtime)
 
 ## Expected Outputs
 
@@ -66,12 +69,15 @@ Use the v1 scope of REQ-0103 and the proposed interfaces in ARCH-0005.
 
 ## Open Questions
 
-Confirm the predecessor contract and integration before promoting to todo.
+None blocking. TASK-0368 is integrated at `d3493d36`.
 
 ## Activity Log
 
 - 2026-11-22: Planned from the owner-approved scope and sequence.
+- 2026-11-22: Started on develop at `d3493d36` after PR #428 merged. Factory ready passed. Formula migration 0072 is the current migration head. Relation is tracked separately.
+- 2026-11-22: Implemented migration 0073 and the authorized revision read and WebSocket. The local mutation, migration and Redis split-process tests passed. Moved to review with REV-0358 and QA-0358. PostgreSQL 17 and Redis 7 remain PR CI gates.
+- 2026-11-22: The owner approved merging PR #429 into develop. All 24 runnable checks passed on reviewed head `0d89c910`, including PostgreSQL 17 and Redis 7. Integration remains gated on checks for the final head.
 
 ## Handoff Notes
 
-Use a dedicated task branch from current develop when implementation is requested. This plan does not authorize a release or merge.
+The Studio task consumes `GET /api/datasets/{dataset_id}/revisions` and `/ws/datasets/{dataset_id}/changes`. Start TASK-0370 from develop after PR #429 merges.

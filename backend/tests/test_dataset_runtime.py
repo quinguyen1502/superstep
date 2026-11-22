@@ -106,6 +106,7 @@ def test_dataset_runtime_write_lookup_permissions_and_dry_run(client):
         await asyncio.Future()
     assert asyncio.run(svc.execute(plan, send, listen, "owner")) == "ok"
     assert final(events)["dry_run"] is True
+    assert call(client, "GET", f"/api/datasets/{did}/revisions") == {"schema_revision": 1, "data_revision": 3}
 
     plan = svc.plan("owner", {**args, "input": {"ticket": "From API", "score": 1, "done": True}})
     plan.source = "api"
@@ -113,6 +114,7 @@ def test_dataset_runtime_write_lookup_permissions_and_dry_run(client):
     assert asyncio.run(svc.execute(plan, send, listen, "owner")) == "ok"  # a public entry writes under the grant
     rows = call(client, "POST", f"/api/datasets/{did}/rows/query", body={})
     assert sorted(item["values"]["ticket"] for item in rows["items"]) == ["A", "From API"]
+    assert call(client, "GET", f"/api/datasets/{did}/revisions") == {"schema_revision": 1, "data_revision": 4}
 
 
 def test_workflow_delete_requires_the_separate_capability(client, db):

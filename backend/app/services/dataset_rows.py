@@ -300,6 +300,7 @@ class DatasetRowService:
             raise AppError("DATASET_BATCH_INVALID", details={"issues": issues})
         changed, added = self.rows.batch_update(uid, dataset, updates, records, remove or {})
         if changed or added or remove:
+            self.datasets.notify_changed(dataset.id)
             self.datasets.audit.record(uid, "dataset.rows_batch_update", "dataset", dataset.id,
                                        rows=len(changed), cells=sum(len(item["previous"]) for item in changed),
                                        added=len(added), removed=len(remove or {}))
@@ -353,6 +354,7 @@ class DatasetRowService:
             reveal=projection is not None and (workflow is not None or connected is not None),
         )
         if not replayed and changed:
+            self.datasets.notify_changed(dataset.id)
             action = "dataset.row_insert" if inserted else "dataset.row_update"
             context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
             if connected:
@@ -382,6 +384,7 @@ class DatasetRowService:
             return {"row_id": found, "deleted": True, "dry_run": True}
         deleted_id, replayed = self.rows.remove(uid, dataset, row_id=row_id, match=match, workflow=workflow, connected=connected)
         if not replayed:
+            self.datasets.notify_changed(dataset.id)
             context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
             if connected:
                 context.update(credential_id=connected.token_id, operation="delete_row")
@@ -401,5 +404,6 @@ class DatasetRowService:
     def delete(self, uid: str, dataset_id: str, row_id: str, revision: int) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         self.rows.delete(uid, dataset, row_id, revision)
+        self.datasets.notify_changed(dataset.id)
         self.datasets.audit.record(uid, "dataset.row_delete", "dataset", dataset.id, row_id=row_id)
         return {"ok": True}

@@ -262,8 +262,10 @@ class DatasetRowRepository:
         if revision is not None and row.revision != revision:
             raise AppError("DATASET_ROW_CONFLICT")
 
-    def _commit(self, session: Session) -> None:
+    def _commit(self, session: Session, dataset_id: str, *, changed: bool) -> None:
         try:
+            if changed:
+                self.datasets.advance_data_revision(session, dataset_id)
             self.datasets._commit(session)
         except IntegrityError as exc:
             constraint = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
@@ -358,7 +360,7 @@ class DatasetRowRepository:
                 result = {"row_id": row.id, "inserted": inserted, "revision": row.revision}
                 session.add(DatasetWriteReceipt(dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id,
                                                 fingerprint=fingerprint, result=result, created=now))
-            self._commit(session)
+            self._commit(session, dataset.id, changed=changed)
             return row, inserted, False, changed
 
     def batch_update(self, uid: str, dataset: Dataset, updates: dict, records: list[dict],
@@ -463,7 +465,7 @@ class DatasetRowRepository:
             session.add_all(added_rows)
             session.flush()
             session.add_all(key for row in added_rows for key in self._keys(dataset, row))
-            self._commit(session)
+            self._commit(session, dataset.id, changed=bool(result or added_rows or removals))
             return result, [{"id": row.id, "revision": row.revision} for row in added_rows]
 
     @staticmethod
@@ -517,7 +519,7 @@ class DatasetRowRepository:
             session.add_all(rows)
             session.flush()
             session.add_all(key for row in rows for key in self._keys(dataset, row))
-            self._commit(session)
+            self._commit(session, dataset.id, changed=bool(values) and not create)
 
     def export_rows(self, uid: str, dataset_id: str) -> Iterator[DatasetRow]:
         statement = select(DatasetRow).join(Dataset, DatasetRow.dataset_id == Dataset.id).where(
@@ -577,7 +579,7 @@ class DatasetRowRepository:
                     dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id, fingerprint=fingerprint,
                     result={"row_id": deleted_id, "deleted": True}, created=time(),
                 ))
-            self._commit(session)
+            self._commit(session, dataset.id, changed=True)
             return deleted_id, False
 
     def delete(self, uid: str, dataset: Dataset, row_id: str, revision: int | None) -> None:
@@ -589,4 +591,4 @@ class DatasetRowRepository:
             self._check_revision(row, revision)
             self._clear_keys(session, dataset.id, row_id)
             session.delete(row)
-            session.commit()
+            self._commit(session, dataset.id, changed=True)

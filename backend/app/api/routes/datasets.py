@@ -90,6 +90,13 @@ def export_csv(dataset_id: str, user=Depends(current_user), svc=Depends(dataset_
     })
 
 
+@router.get("/{dataset_id}/revisions")
+def dataset_revisions(dataset_id: str, response: Response, user=Depends(current_user), svc=Depends(dataset_service)):
+    marker = svc.revisions(user["id"], dataset_id)
+    response.headers["Cache-Control"] = "no-store"
+    return marker
+
+
 @router.get("/{dataset_id}")
 def get_dataset(dataset_id: str, user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.get(user["id"], dataset_id)

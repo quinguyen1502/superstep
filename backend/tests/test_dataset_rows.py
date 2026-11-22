@@ -99,6 +99,9 @@ def test_row_constraints_and_concurrent_upsert(client, rows):
         results = list(pool.map(upsert, ["First", "Second"]))
     assert results[0]["row"]["id"] == results[1]["row"]["id"]
     assert sorted(result["inserted"] for result in results) == [False, True]
+    assert call(client, "GET", rows.removesuffix("/rows") + "/revisions") == {
+        "schema_revision": 1, "data_revision": 4,
+    }
     assert len(query(client, rows, filters=[{"field": "ticket", "op": "eq", "value": "C"}])["items"]) == 1
 
 

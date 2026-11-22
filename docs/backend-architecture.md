@@ -182,6 +182,51 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - Observer receive/push/heartbeat tasks share an AnyIO task group tied to the ASGI lifetime; PubSub connection cleanup is shielded from cancellation and does not leave detached subscriptions.
 - Studio reads snapshots through the existing `/api/workflows/{wid}/runs` envelope API after an invalidation, reconnect or focus, with a disconnected polling fallback. The current chat socket additionally updates its own run immediately. Selected runs remain selected and update their persisted traces; workflow switches and stale responses are guarded. No migration or expanded history permission.
 
+## Dataset realtime
+
+The Dataset writer lock covers a persisted `data_revision` in addition to the
+existing schema revision and each row's optimistic revision. A new Dataset
+starts at data revision 1. Each later transaction that changes its definition
+or rows advances the marker once. Services publish a Dataset-scoped signal
+after committing the change. A missed signal leaves the marker available for
+resync.
+
+| Writer | Effect |
+| --- | --- |
+| Dataset create | Initializes the revision and publishes once after creation. |
+| Studio insert, update, upsert, delete | Advances and publishes once after a changed write. |
+| Studio batch and undo | Advances and publishes once for the whole transaction. An unchanged batch keeps its revision. |
+| CSV | Creating a Dataset and its rows initializes one revision. Appending rows advances one revision. Preview keeps the marker unchanged. |
+| Workflow Dataset node, Agent tools, Connected API | Use the shared row writer. Receipt replay, dry run and no-op upserts keep the marker unchanged. |
+| Schema changes and Formula backfill | Advance the schema and data revisions in the same transaction. |
+| Dataset deletion | Explicit deletion wakes observers after commit. Deleted Datasets and removed memberships fail authorization. Cascading deletion and access changes are detected on the next push or heartbeat. |
+
+`GET /api/datasets/{dataset_id}/revisions` returns `schema_revision` and
+`data_revision` in the standard envelope with `Cache-Control: no-store`. It
+uses the same Dataset visibility rule as row reads and selects only the two
+revisions.
+
+`/ws/datasets/{dataset_id}/changes` checks the Studio session cookie and
+browser origin. The configured external origin via `STUDIO_PUBLIC_URL` works
+behind a reverse proxy. The server subscribes and reads the current marker
+before sending `ready`. It sends `dataset_changed` with the same two revision
+fields when the marker advances and a `ping` every 20 seconds. The server
+authorizes the session and Dataset again before either type of push. Losing
+authentication closes the socket with 4401. Losing Dataset access closes it
+with 4403. Clients read rows and schema through their existing authorized
+endpoints.
+
+The memory hub keeps one pending signal per Dataset socket. Redis Pub/Sub
+fans signals out across API and worker processes. The socket coalesces
+signals by the persisted marker and closes a stalled send after five seconds.
+Reconnect, focus and fallback reads can use the revision endpoint to recover
+the latest state. A publish failure does not undo a committed write.
+
+Migration `0073_dataset_data_revision` initializes existing Datasets at 1.
+Upgrade the API and worker together so every writer advances the marker.
+The database can retain the column if live consumers are disabled. If the
+migration is downgraded and reapplied, active readers need a fresh snapshot.
+
 ## LLM providers
 
 `engine/providers.py` is the provider registry (one strategy class per provider: defaults, model listing, LangChain chat model). `engine/llm.py` dispatches LLM nodes to it; `services/credential_service.py` uses it for validation, model lists and connection tests. Engine failures are `ProviderError(code)` and become `AppError` in the service.

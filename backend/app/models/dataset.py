@@ -23,6 +23,7 @@ class Dataset(Base):
     name_key: Mapped[str]
     description: Mapped[str | None]
     revision: Mapped[int]
+    data_revision: Mapped[int] = mapped_column(BigInteger, default=1, server_default="1")
     auto_number_counter: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")
     created: Mapped[float]
     updated: Mapped[float]
