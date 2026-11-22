@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
+import { Fragment, useEffect, useEffectEvent, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   cellSelectionFeature, columnGroupingFeature, columnOrderingFeature, columnPinningFeature, columnResizingFeature, columnSizingFeature,
@@ -7,7 +7,7 @@ import {
   type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater,
 } from '@tanstack/react-table'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual'
-import { CircleAlert, ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, X } from 'lucide-react'
+import { CircleAlert, ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, WifiOff, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -34,6 +34,7 @@ import { DatasetColumnControls, DatasetUniqueBadge } from './dataset-column-cont
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
 import { DatasetQueryControls } from './dataset-query-controls'
+import { isDatasetAccessError, useDatasetLive } from './use-dataset-live'
 
 const NO_ROWS: DatasetRow[] = []
 const features = tableFeatures({
@@ -85,6 +86,12 @@ function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizi
 }
 
 const GROUP_PAGE_SIZE = 50
+const SNAPSHOT_RETRY = 5_000
+
+function queryRows(url: string, request: string, offset: number, signal: AbortSignal) {
+  const query = JSON.parse(request)
+  return api<DatasetRowPage>(url, { method: 'POST', json: { ...query, offset }, signal })
+}
 const groupKey = (value: CellValue) => JSON.stringify(value)
 
 const ROW_INDEX = 'sticky start-0 z-20 border-e border-border bg-background'
@@ -139,11 +146,13 @@ function DatasetCellPreview({ anchor, content, value, className, onClose }: {
   </Popover>
 }
 
-export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, viewOnlyId }: {
+export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onAccessLost, initialFilters, viewOnlyId }: {
   dataset: Dataset
   editable: boolean
   viewOnlyId?: string
   reloadDataset: () => void
+  readDataset: (id: string, signal: AbortSignal) => Promise<Dataset>
+  onAccessLost: () => void
   initialFilters?: DatasetFilters
 }) {
   const { t } = useTranslation()
@@ -158,6 +167,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [selectingCells, setSelectingCells] = useState(false)
   const saving = useRef(false)
   const restoreEditorFocus = useRef(false)
+  const restoreCellFocus = useRef<string | null>(null)
   const confirm = useConfirmDelete()
   const [autoOffset, setAutoOffset] = useState<number | null>(null)
   const [autoPage, setAutoPage] = useState<DatasetRowPage | null>(null)
@@ -176,6 +186,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [offsets, setOffsets] = useState([0])
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 })
   const [refresh, setRefresh] = useState(0)
+  const [snapshotError, setSnapshotError] = useState(false)
+  const [snapshotRunning, setSnapshotRunning] = useState(false)
+  const completedSnapshot = useRef('')
+  const completedQuery = useRef('')
   const [selection, setSelection] = useState<RowSelectionState>({})
   const layoutKey = `studio-dataset-layout:${dataset.id}`
   const [storedLayout] = useState(() => readLayout(layoutKey))
@@ -219,13 +233,21 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [stale, setStale] = useState(false)
   const [busy, setBusy] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const editing = !!edit || !!draft || !!rowDetails || batchBusy
+  const editing = !!edit || !!draft || !!rowDetails || !!pastePreview || batchBusy
+  const live = useDatasetLive(dataset.id, onAccessLost)
+  const [snapshotRevision, setSnapshotRevision] = useState(live.revision)
+  // Keep only the latest pending marker while reading pages or preserving an editor draft.
+  useEffect(() => {
+    if (!editing && !snapshotRunning && autoOffset === null && live.revision) setSnapshotRevision(live.revision)
+  }, [autoOffset, editing, live.revision, snapshotRunning])
+  const canRead = snapshotRevision !== null || live.delayed
   useShortcuts({ cheatsheet: () => {
     if (editing) return false
     setShortcutsOpen(true)
   } }, SHORTCUT_HELP)
   const addingRow = !!draft
-  const offset = offsets[pagination.pageIndex] ?? 0
+  const pageIndex = pagination.pageIndex
+  const offset = offsets[pageIndex] ?? 0
   const url = `${datasetUrl(dataset.id)}/rows`
   const layout = useMemo(() => {
     const remainingFields = new Map(dataset.columns.map(column => [column.key, column]))
@@ -271,51 +293,141 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     }
   }, [dataset.columns, filters, search, summaryColumns])
 
-  const summaryKey = JSON.stringify([dataset.revision, refresh, summaryRequest])
+  const summaryQuery = showSummaries && Object.keys(summaryColumns).length ? JSON.stringify(summaryRequest) : null
+  const summaryKey = JSON.stringify([dataset.revision, summaryQuery])
   const currentSummaryError = summaryError?.key === summaryKey ? summaryError.message : null
   const currentSummary = summary?.key === summaryKey ? summary.data : null
-  useEffect(() => {
-    if (!showSummaries || !Object.keys(summaryRequest.summaries).length) return
-    const controller = new AbortController()
-    void api<DatasetSummaryResult>(`${url}/summary`, {
-      method: 'POST', json: summaryRequest, signal: controller.signal,
-    }).then(result => {
-      if (controller.signal.aborted) return
-      if (result.schema_revision !== dataset.revision) {
-        reloadDataset()
-        return
-      }
-      setSummary({ key: summaryKey, data: result })
-      setSummaryError(null)
-    }).catch(error => {
-      if (!controller.signal.aborted) setSummaryError({ key: summaryKey, message: error.message })
-    })
-    return () => controller.abort()
-  }, [dataset.revision, refresh, reloadDataset, showSummaries, summaryKey, summaryRequest, url])
-
   const groupsRequest = groupColumn ? JSON.stringify({
-    ...summaryRequest, summaries: showSummaries ? summaryRequest.summaries : {},
+    ...summaryRequest, summaries: showSummaries ? summaryColumns : {},
     group_by: groupColumn.key, offset: groupOffset, limit: GROUP_PAGE_SIZE,
   }) : null
-  const groupsRequestKey = JSON.stringify([groupsRequest, dataset.revision, refresh])
+  const groupsRequestKey = JSON.stringify([dataset.revision, groupsRequest])
   const groups = groupResult?.request === groupsRequestKey ? groupResult.data : null
   const groupError = groupsError?.request === groupsRequestKey ? groupsError.message : null
 
+  const rowsQuery = !groupColumn || selectedGroup !== undefined ? JSON.stringify({
+    search: summaryRequest.search,
+    ...(summaryRequest.filter_tree ? { filter_tree: summaryRequest.filter_tree } : {}),
+    sorts: sorting.filter(rule => dataset.columns.some(field => field.key === rule.id))
+      .map(rule => ({ field: rule.id, descending: rule.desc })),
+    ...(groupColumn && selectedGroup !== undefined ? { group_by: groupColumn.key, group: JSON.parse(selectedGroup) as CellValue } : {}),
+    limit: pagination.pageSize,
+  }) : null
+  const rowQueryUrl = `${url}/${groupColumn ? 'groups/query' : 'query'}`
+  const loadedRows = useEffectEvent(() => autoPage?.items.length ?? 0)
+  const canCommitSnapshot = useEffectEvent(() => !editing)
+  const rememberFocusedCell = useEffectEvent(() => {
+    const focused = document.activeElement
+    if (active && focused?.id === cellId(active.row, active.column)) restoreCellFocus.current = focused.id
+  })
+  const [retry, setRetry] = useState(0)
+  const queryKey = JSON.stringify([dataset.revision, refresh, rowsQuery, offset, summaryKey, groupsRequestKey])
+  const snapshotKey = JSON.stringify([queryKey, snapshotRevision, retry])
   useEffect(() => {
-    if (!groupsRequest) return
+    if (!canRead || editing || completedSnapshot.current === snapshotKey) {
+      setSnapshotRunning(false)
+      return
+    }
     const controller = new AbortController()
-    void api<DatasetGroupsPage>(`${url}/groups`, {
-      method: 'POST', body: groupsRequest, headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-    }).then(result => {
-      if (controller.signal.aborted) return
-      if (result.schema_revision !== dataset.revision) reloadDataset()
-      setGroupResult({ request: groupsRequestKey, data: result })
-      setGroupsError(null)
-    }).catch(error => {
-      if (!controller.signal.aborted) setGroupsError({ request: groupsRequestKey, message: error.message })
+    const { signal } = controller
+    let retryTimer: number | undefined
+    const keepRowCount = loadedRows()
+    setSnapshotRunning(true)
+    const fetchRows = async (request: string) => {
+      const first = await queryRows(rowQueryUrl, request, offset, signal)
+      let joined = first
+      while (joined.next_offset !== null && joined.items.length < keepRowCount && joined.schema_revision === dataset.revision) {
+        const next = await queryRows(rowQueryUrl, request, joined.next_offset, signal)
+        if (next.schema_revision !== dataset.revision) return { first: next, joined: next }
+        joined = { ...next, items: [...joined.items, ...next.items] }
+      }
+      return { first, joined }
+    }
+    const retrySnapshot = () => {
+      setSnapshotError(true)
+      retryTimer = window.setTimeout(() => setRetry(count => count + 1), SNAPSHOT_RETRY)
+    }
+    const checkAccess = <T,>(request: Promise<T>) => request.catch(error => {
+      if (!signal.aborted && isDatasetAccessError(error)) {
+        controller.abort()
+        onAccessLost()
+      }
+      throw error
     })
-    return () => controller.abort()
-  }, [dataset.revision, groupsRequest, groupsRequestKey, reloadDataset, url])
+    async function readSnapshot() {
+      if (snapshotRevision && snapshotRevision.schema_revision !== dataset.revision) {
+        const definition = await readDataset(dataset.id, signal)
+        if (signal.aborted || definition.revision !== dataset.revision) return
+      }
+      const [rowsResult, groupsResult, summaryResult] = await Promise.allSettled([
+        rowsQuery ? checkAccess(fetchRows(rowsQuery)) : null,
+        groupsRequest ? checkAccess(api<DatasetGroupsPage>(`${url}/groups`, {
+          method: 'POST', json: JSON.parse(groupsRequest), signal,
+        })) : null,
+        summaryQuery ? checkAccess(api<DatasetSummaryResult>(`${url}/summary`, {
+          method: 'POST', json: JSON.parse(summaryQuery), signal,
+        })) : null,
+      ])
+      if (signal.aborted || !canCommitSnapshot()) return
+      const nextRows = rowsResult.status === 'fulfilled' ? rowsResult.value : null
+      const nextGroups = groupsResult.status === 'fulfilled' ? groupsResult.value : null
+      const nextSummary = summaryResult.status === 'fulfilled' ? summaryResult.value : null
+      if ([nextRows?.first, nextGroups, nextSummary].some(result => result && result.schema_revision !== dataset.revision)) {
+        const definition = await readDataset(dataset.id, signal)
+        if (!signal.aborted && definition.revision === dataset.revision) retrySnapshot()
+        return
+      }
+      const failed = rowsResult.status === 'rejected' || groupsResult.status === 'rejected' || summaryResult.status === 'rejected'
+      if (failed && completedQuery.current === queryKey && snapshotRevision) {
+        retrySnapshot()
+        return
+      }
+      if (nextRows) {
+        rememberFocusedCell()
+        if (!nextRows.first.items.length && pageIndex > 0) {
+          setPagination(current => ({ ...current, pageIndex: Math.min(current.pageIndex - 1,
+            Math.floor(Math.max(0, nextRows.first.total - 1) / current.pageSize)) }))
+        }
+        setPage(nextRows.first)
+        setAutoPage(nextRows.joined === nextRows.first ? null : nextRows.joined)
+        setLoadError('')
+      } else if (rowsResult.status === 'rejected') setLoadError(rowsResult.reason.message)
+      if (nextGroups) {
+        if (!nextGroups.groups.length && groupOffset > 0) {
+          setGroupOffset(0)
+          setExpanded({})
+          setPage(null)
+        } else if (selectedGroup !== undefined && !nextGroups.groups.some(group => groupKey(group.group) === selectedGroup)) {
+          setExpanded({})
+          setPage(null)
+        }
+        setGroupResult({ request: groupsRequestKey, data: nextGroups })
+        setGroupsError(null)
+      } else if (groupsResult.status === 'rejected') setGroupsError({ request: groupsRequestKey, message: groupsResult.reason.message })
+      if (nextSummary) {
+        setSummary({ key: summaryKey, data: nextSummary })
+        setSummaryError(null)
+      } else if (summaryResult.status === 'rejected') setSummaryError({ key: summaryKey, message: summaryResult.reason.message })
+      if (!failed) {
+        completedSnapshot.current = snapshotKey
+        completedQuery.current = queryKey
+        setSnapshotError(false)
+      }
+    }
+    void readSnapshot().catch(error => {
+      if (signal.aborted) return
+      if (isDatasetAccessError(error)) onAccessLost()
+      else retrySnapshot()
+    }).finally(() => { if (!signal.aborted) setSnapshotRunning(false) })
+    return () => { controller.abort(); clearTimeout(retryTimer) }
+  }, [canRead, dataset.id, dataset.revision, editing, groupOffset, groupsRequest, groupsRequestKey,
+    offset, onAccessLost, pageIndex, queryKey, readDataset, rowQueryUrl, rowsQuery, selectedGroup, snapshotKey, snapshotRevision, summaryKey, summaryQuery, url])
+
+  useLayoutEffect(() => {
+    const id = restoreCellFocus.current
+    restoreCellFocus.current = null
+    if (id && document.activeElement === document.body) document.getElementById(id)?.focus({ preventScroll: true })
+  }, [autoPage, page])
 
   useLayoutEffect(() => {
     if (busy || !restoreEditorFocus.current) return
@@ -411,23 +523,15 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     getItemKey: index => rows[index]?.id ?? index,
     rangeExtractor: range => {
       const indices = defaultRangeExtractor(range)
-      const current = edit ? rows.findIndex(row => row.id === edit.row.id) : -1
+      const current = rows.findIndex(row => row.id === (edit?.row.id ?? active?.row))
       return current < 0 || indices.includes(current) ? indices : [...indices, current].sort((a, b) => a - b)
     },
   })
   const virtualRows = virtualizer.getVirtualItems()
   useEffect(() => {
-    if (autoOffset === null || groupColumn) return
+    if (autoOffset === null || groupColumn || !rowsQuery) return
     const controller = new AbortController()
-    const fields = new Set(dataset.columns.map(column => column.key))
-    const filterTree = keepDatasetFilterFields(filters, fields)
-    void api<DatasetRowPage>(`${url}/query`, {
-      method: 'POST', signal: controller.signal, json: {
-        search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
-        sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
-        offset: autoOffset, limit: pagination.pageSize,
-      },
-    }).then(result => {
+    void queryRows(rowQueryUrl, rowsQuery, autoOffset, controller.signal).then(result => {
       if (controller.signal.aborted) return
       if (result.schema_revision !== dataset.revision) { reloadDataset(); return }
       setAutoPage(current => {
@@ -435,12 +539,14 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         return previous ? { ...result, items: [...previous.items, ...result.items] } : result
       })
     }).catch(error => {
-      if (!controller.signal.aborted) setLoadError(error.message)
+      if (controller.signal.aborted) return
+      if (isDatasetAccessError(error)) onAccessLost()
+      else setLoadError(error.message)
     }).finally(() => {
       if (!controller.signal.aborted) setAutoOffset(null)
     })
     return () => controller.abort()
-  }, [autoOffset, dataset.columns, dataset.revision, filters, groupColumn, page, pagination.pageSize, reloadDataset, search, sorting, url])
+  }, [autoOffset, dataset.revision, groupColumn, onAccessLost, page, reloadDataset, rowQueryUrl, rowsQuery])
 
   function clearAutoPages() {
     setAutoOffset(null)
@@ -450,7 +556,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function loadMoreOnScroll() {
-    if (!useVirtualRows || editing || loadError || autoOffset !== null || displayPage?.next_offset == null) return
+    if (!useVirtualRows || editing || loadError || snapshotRunning || autoOffset !== null || displayPage?.next_offset == null) return
     const viewport = scrollViewport()
     if (viewport && viewport.scrollTop > 0 && viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < HEIGHTS[rowHeight] * 4) {
       setAutoOffset(displayPage.next_offset)
@@ -478,29 +584,6 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   useEffect(() => {
-    if (groupColumn && selectedGroup === undefined) return
-    let active = true
-    const fields = new Set(dataset.columns.map(column => column.key))
-    const filterTree = keepDatasetFilterFields(filters, fields)
-    api<DatasetRowPage>(`${url}/${groupColumn ? "groups/query" : "query"}`, {
-      method: 'POST', json: {
-        search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
-        sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
-        ...(groupColumn && selectedGroup !== undefined ? { group_by: groupColumn.key, group: JSON.parse(selectedGroup) as CellValue } : {}),
-        offset, limit: pagination.pageSize,
-      },
-    }).then(result => {
-      if (!active) return
-      if (result.schema_revision !== dataset.revision) reloadDataset()
-      setPage(result)
-      setLoadError('')
-    }).catch(error => {
-      if (active) setLoadError(error.message)
-    })
-    return () => { active = false }
-  }, [filters, dataset.columns, dataset.revision, groupColumn, offset, pagination.pageSize, refresh, reloadDataset, search, selectedGroup, sorting, url])
-
-  useEffect(() => {
     const next = searchText.trim()
     if (editing || next === search) return
     const timer = window.setTimeout(() => {
@@ -513,7 +596,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }, [editing, groupColumn, search, searchText])
 
   function reload() {
-    clearAutoPages()
+    setAutoOffset(null)
     setLoadError('')
     setRefresh(current => current + 1)
   }
@@ -546,7 +629,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   async function applyBatch(updates: DatasetBatchRow[], previous = false, append: Record<string, CellValue>[] = []) {
-    if (!editable || editing || batchLock.current || (!updates.length && !append.length && !previous)) return
+    if (!editable || edit || draft || rowDetails || batchLock.current || (!updates.length && !append.length && !previous)) return
     if (updates.length + append.length > 100 || [...updates.map(row => row.values), ...append].reduce((count, values) => count + Object.keys(values).length, 0) > 500) {
       setBatchError(t('dataset.clipboardLimit'))
       return
@@ -1061,7 +1144,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           </SelectContent>
         </Select>
         <Button variant="toolbar" aria-pressed={showSummaries} disabled={editing}
-          onClick={() => { setSummary(null); setSummaryError(null); setShowSummaries(value => !value) }}><Sigma />{t('dataset.summary')}</Button>
+          onClick={() => setShowSummaries(value => !value)}><Sigma />{t('dataset.summary')}</Button>
         <DatasetQueryControls columns={dataset.columns} disabled={editing} filters={filters} sorting={sorting}
           onFilters={applyFilters} onSorting={changeSorting} />
         <DatasetColumnControls columns={layout.orderedFields} visibleKeys={new Set(layout.fields.map(column => column.key))}
@@ -1226,7 +1309,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       </div>}
       <div className="flex items-center gap-2">
         <span role="status" className="flex items-center gap-1 text-xs text-muted-foreground">
-          {notice && <><Check aria-hidden="true" className="size-3" />{notice}</>}
+          {(live.delayed || snapshotError) && <><WifiOff aria-hidden="true" className="size-4 text-warning" />{t('dataset.liveDelayed')}</>}
+          {!live.delayed && !snapshotError && notice && <><Check aria-hidden="true" className="size-3" />{notice}</>}
         </span>
         <Select value={String(pagination.pageSize)} disabled={editing} onValueChange={value => {
           clearAutoPages()

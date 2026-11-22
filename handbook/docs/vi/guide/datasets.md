@@ -46,6 +46,14 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
   giá trị. **Không bằng** khớp cả ô để trống. Mỗi điều kiện lọc có giải thích
   cho toán tử của nó.
 
+Thẻ **Dòng dữ liệu** tự cập nhật các dòng, nhóm và thống kê đang xem khi có
+thay đổi từ studio, tệp CSV được nhập, workflow hoặc ứng dụng kết nối. Bộ lọc,
+thứ tự sắp xếp và vị trí cuộn được giữ khi có thể. Studio giữ bản nháp của ô
+hoặc dòng và cập nhật sau khi bạn lưu hoặc huỷ. Nếu người khác đã lưu cùng dòng,
+chọn **Tải giá trị hiện tại** để xem giá trị mới và xem lại bản nháp trước khi lưu.
+Studio kiểm tra thay đổi khi bạn quay lại thẻ hoặc kết nối lại. Nếu mất quyền
+truy cập, studio sẽ đóng lưới.
+
 Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi dòng. Ai nhìn thấy tập
 dữ liệu thì đọc được dòng. Khi thiếu quyền đó, các nút tạo, sửa, nhập, và xoá vẫn
 hiện nhưng bị tắt, kèm ghi chú giải thích lý do. Liên kết tới tập dữ liệu đã bị

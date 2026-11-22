@@ -389,6 +389,8 @@
     "activeFilterCount_other": "{{count}} bộ lọc đang áp dụng",
     "activeSortCount_one": "{{count}} cột đang sắp xếp",
     "activeSortCount_other": "{{count}} cột đang sắp xếp",
+    "liveDelayed": "Cập nhật trực tiếp đang chậm.",
+    "liveAccessLost": "Bạn không còn quyền truy cập tập dữ liệu này, hoặc tập dữ liệu đã bị xoá.",
     "rowsUnavailable": "Không tải được các dòng.",
     "noRows": "Không có dòng phù hợp.",
     "previousPage": "Trang trước",

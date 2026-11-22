@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0370
 - Title: Refresh the Studio Dataset grid on live changes
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -32,6 +32,8 @@ Connect the authenticated Rows tab to the invalidation feed, coalesce signals, r
 - [Architecture](../../artifacts/ARCH-0005-dataset-integrations-and-live-sharing.md)
 - [Decision](../../decisions/DEC-0103-dataset-integration-and-sharing-boundaries.md)
 - [Delivery plan](../../artifacts/PLAN-0021-dataset-integrations-and-live-sharing.md)
+- [Review](../../artifacts/REV-0359-TASK-0370-dataset-live-studio-grid.md)
+- [QA](../../artifacts/QA-0359-TASK-0370-dataset-live-studio-grid.md)
 
 ## Expected Outputs
 
@@ -66,12 +68,16 @@ Use the v1 scope of REQ-0103 and the proposed interfaces in ARCH-0005.
 
 ## Open Questions
 
-Confirm the predecessor contract and integration before promoting to todo.
+None blocking. The predecessor contract is integrated into develop at `dad1125f`.
 
 ## Activity Log
 
 - 2026-11-22: Planned from the owner-approved scope and sequence.
+- 2026-11-22: Started from develop at `dad1125f` after PR #429 merged. Factory ready passed. Formula runs on migration 0072, the live revision is on 0073, and Relation remains tracked separately. The open Rows grid will reconcile active reads and defer refresh while an editor has a draft.
+- 2026-11-22: Implemented authorized snapshot refresh, draft deferral, focus and scroll continuity, reconnect and fallback, and access-loss cleanup. The three new browser cases, frontend checks and focused backend checks passed. Moved to review with REV-0359 and QA-0359.
+- 2026-11-22: The owner approved merging PR #430 into develop. All 25 runnable checks passed on reviewed head `d6fd32f8`, including all Playwright shards, the bilingual handbook, PostgreSQL 17 and Redis 7. Integration remains gated on checks for the final head.
+- 2026-11-22: The final-head Playwright shard exposed a timing assumption in the grouped-refresh count. The scenario now waits for the latest committed revision to reach the actual socket and finish coalescing while the draft is open. Product source remains as reviewed.
 
 ## Handoff Notes
 
-Use a dedicated task branch from current develop when implementation is requested. This plan does not authorize a release or merge.
+Start TASK-0371 from develop after PR #430 merges.

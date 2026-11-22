@@ -48,7 +48,7 @@ Validate active keys and typed filter on creation and before using them. Apply t
 
 ## Dependencies
 
-- [TASK-0370](../backlog/TASK-0370-dataset-live-studio-grid.md). Start after this dependency integrates, or document an approved stack.
+- [TASK-0370](../done/TASK-0370-dataset-live-studio-grid.md). Start after this dependency integrates, or document an approved stack.
 
 ## Acceptance Criteria
 

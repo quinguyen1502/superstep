@@ -45,6 +45,14 @@ On a narrow screen the catalog folds under the header and the grid scrolls sidew
   sorts ignore letter case too. **Equals** and unique keys match the exact value. **Does not equal**
   also matches empty cells. Each filter condition explains its operator.
 
+The **Rows** tab refreshes open rows, groups, and summaries as changes are saved
+in Studio, imported from CSV, or written by workflows and connected apps.
+Your filters, sort, and scroll position stay in place where possible. Studio
+keeps a cell or row draft open and refreshes after you save or cancel. If
+someone else saved the same row, use **Load current value** to see their value and
+review your draft before saving again. Studio checks for updates when you
+return to the tab or reconnect. If you lose access, Studio closes the grid.
+
 You need `resources.manage` to create a dataset or change its rows. Anyone who
 can see the dataset can read rows. Without that permission the create, edit,
 import, and delete controls stay visible but disabled, with a note that explains
