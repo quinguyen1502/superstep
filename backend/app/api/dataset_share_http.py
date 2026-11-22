@@ -1,16 +1,21 @@
-"""Response policy for Dataset share routes, including rejected requests."""
+"""Response policy for the Dataset share reader and API routes."""
 
 import re
 
 from starlette.datastructures import MutableHeaders
 
+DATASET_VIEW_PAGE = "/dataset-view"
 PUBLIC_DATASET_VIEW = "/api/public/v1/dataset-view"
 DATASET_SHARE_HEADER = "X-Dataset-Share"
 SHARE_MANAGEMENT = re.compile(r"^/api/datasets/[^/]+/shares(?:/.*)?$")
 
 
 def share_response_headers(path: str) -> dict[str, str]:
-    if path == PUBLIC_DATASET_VIEW or path.startswith(PUBLIC_DATASET_VIEW + "/"):
+    if (
+        path.lower().rstrip("/") == DATASET_VIEW_PAGE
+        or path == PUBLIC_DATASET_VIEW
+        or path.startswith(PUBLIC_DATASET_VIEW + "/")
+    ):
         return {"Cache-Control": "no-store", "X-Robots-Tag": "noindex", "Referrer-Policy": "no-referrer"}
     return {"Cache-Control": "no-store"} if SHARE_MANAGEMENT.fullmatch(path) else {}
 

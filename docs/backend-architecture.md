@@ -259,10 +259,12 @@ response for an invalid, rotated, revoked or incompatible link and rechecks
 authorization before emitting a page. Relation fields are outside the v1 scope.
 
 Send the capability only in `X-Dataset-Share`. Browser links keep it in the
-fragment and transfer it to the header without putting it in the request URL.
+fragment of `/dataset-view` and transfer it to the header without putting it
+in the request URL or sending Studio session credentials.
 The application omits it from audit records and telemetry. Proxies should omit
 this header and response bodies from logs. Responses use `Cache-Control:
-no-store`. Anonymous API responses also set `X-Robots-Tag: noindex` and
+no-store`. In both all-in-one and Compose deployments, the reader document
+and anonymous API responses send `X-Robots-Tag: noindex` and
 `Referrer-Policy: no-referrer`.
 
 Management bodies are limited to 256 KiB. Public queries are GETs with up to

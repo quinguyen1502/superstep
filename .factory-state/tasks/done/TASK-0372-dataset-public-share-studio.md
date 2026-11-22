@@ -5,7 +5,7 @@
 - Project: superstep
 - Task ID: TASK-0372
 - Title: Add sharing controls and a public Dataset viewer
-- Status: backlog
+- Status: done
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -32,6 +32,8 @@ Add Share links in Dataset Access for permitted managers. Support field selectio
 - [Architecture](../../artifacts/ARCH-0005-dataset-integrations-and-live-sharing.md)
 - [Decision](../../decisions/DEC-0103-dataset-integration-and-sharing-boundaries.md)
 - [Delivery plan](../../artifacts/PLAN-0021-dataset-integrations-and-live-sharing.md)
+- [Review](../../artifacts/REV-0361-TASK-0372-dataset-public-share-studio.md)
+- [QA](../../artifacts/QA-0361-TASK-0372-dataset-public-share-studio.md)
 
 ## Expected Outputs
 
@@ -66,12 +68,18 @@ Use the v1 scope of REQ-0103 and the proposed interfaces in ARCH-0005.
 
 ## Open Questions
 
-Confirm the predecessor contract and integration before promoting to todo.
+None blocking. The share API integrated in develop at 2c7c5ec7. Formula is present and the Relation storage milestone remains separate.
 
 ## Activity Log
 
 - 2026-11-22: Planned from the owner-approved scope and sequence.
 
+- 2026-11-22: Started from develop at `2c7c5ec7` after PR #431 merged. Factory ready passed.
+
+- 2026-11-22: Implemented the Share links manager and anonymous reader. Playwright covered preview parity, rotation, revocation, both locales and themes, and a Connected SDK write across two Studio sessions. Moved to review with REV-0361 and QA-0361.
+
+- 2026-11-22: The owner explicitly approved merging PR #432 into develop. All 25 checks passed on reviewed commit `f6b12929`. [PR #432 checks](https://github.com/quinguyen1502/superstep/pull/432/checks)
+
 ## Handoff Notes
 
-Use a dedicated task branch from current develop when implementation is requested. This plan does not authorize a release or merge.
+The reader is served at `/dataset-view`. The public capability is copied in the fragment and passed in the dedicated header without Studio credentials. The final task commit must pass PR CI before integration. PLAN-0021 links the acceptance evidence across all six tasks.

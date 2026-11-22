@@ -101,6 +101,25 @@ write access. Upsert still reveals whether a row with that key exists. If that
 must stay hidden, use **Insert row**. An upsert that changes no value keeps the
 row's revision and update time.
 
+### Share a read-only view {#share-links}
+
+A Dataset manager can open **Access → Share links → Create share link**,
+name the view, and choose which columns to publish. Add a **Fixed filter**
+to limit which rows are visible. A filter can use a private column while
+keeping that column out of the published view. Select **Preview** to check
+the columns and rows before you create the link.
+
+Copy the public URL when it appears. Anyone with that URL can open the view
+without a Superstep account. Visitors can page through the results and search
+the published text columns. Changes to matching rows are visible on the next
+request. The visitor view is read-only.
+
+**Rotate link** replaces the URL immediately and shows the replacement once.
+**Revoke share link** removes access. The next request to an old or revoked
+link shows that it is unavailable. Changing a referenced column in an
+incompatible way can also disable the link. In that case, review the current
+columns and filter, create a new link, and revoke the outdated one.
+
 ## CSV {#csv}
 
 **Import CSV** previews the file before it writes anything.

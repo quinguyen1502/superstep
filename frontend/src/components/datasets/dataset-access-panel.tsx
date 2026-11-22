@@ -11,6 +11,8 @@ import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { api } from '@/lib/api'
 import { datasetUrl, type Dataset } from '@/lib/datasets'
 
+import { DatasetShareManager } from './dataset-share-manager'
+
 const permissions = ['read', 'write', 'read_write'] as const
 type Permission = (typeof permissions)[number]
 type Grant = { workflow_id: string; workflow_name: string | null; permission: Permission; allow_delete: boolean }
@@ -192,6 +194,7 @@ export function DatasetAccessPanel({ dataset, workflow }: { dataset: Dataset; wo
             </div>}
           </section>
         </>}
+        {access && <DatasetShareManager dataset={dataset} />}
         {error && <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert>}
     {confirm.dialog}
   </div>

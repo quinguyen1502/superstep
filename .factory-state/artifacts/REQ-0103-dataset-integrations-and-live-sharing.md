@@ -4,7 +4,7 @@
 
 - Project: superstep
 - Requirement ID: REQ-0103
-- Status: Accepted for planning
+- Status: Implemented
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-22
 - Updated: 2026-11-22
@@ -48,7 +48,7 @@ Exported workflows already call a token-authenticated Connected API. Application
 
 - Sequence the three milestones as accepted by the owner. Coordinate shared migration order and field contract changes with the Formula and Relation plan.
 - The approved link model is a live, read-only view with a fixed share configuration. Link lifetime is controlled by rotation and revocation in v1.
-- No product decision blocks the first task. Validate deployment-specific rate and connection budgets during implementation.
+- Deployment-specific rate and connection budgets remain operator settings. See the delivery plan for the verified implementation and acceptance evidence.
 
 ## Related Artifacts
 
