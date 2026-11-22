@@ -85,7 +85,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-      id-token: write  # npm provenance
     defaults:
       run:
         working-directory: sdk/typescript

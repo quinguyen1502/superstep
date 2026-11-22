@@ -225,8 +225,7 @@ serves a headless SDK portal, [React toolkit](chat-react.md) page and
 sign-in demonstration; replace its stub before deploying an account system. CI keeps screenshots as
 downloadable artifacts, outside Git.
 
-The 0.13.0 release candidate includes TypeScript SDK 0.3.0 and Python SDK 0.13.0.
-Python uses the same version as the CLI and server.
+The Python SDK, CLI and server share a version number. The TypeScript SDK is versioned independently.
 
 ## Schedules
 

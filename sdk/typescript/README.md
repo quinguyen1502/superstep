@@ -1,7 +1,6 @@
 # @superstep/sdk (TypeScript SDK)
 
-Dataset access, headless chat, runs, and schedules for Superstep. Version 0.3.0 adds workflow-scoped
-cron schedule management and preview.
+Dataset access, headless chat, runs, and cron schedule management for Superstep.
 Zero runtime dependencies; ESM and CommonJS; HTTP types generated from OpenAPI
 and socket types generated from the backend JSON Schemas. Chat uses `fetch` and
 an injectable WebSocket in browsers, Node 18+ and React Native.

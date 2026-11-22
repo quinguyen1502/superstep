@@ -16,8 +16,7 @@ Nếu muốn thêm bong bóng vào website, xem [Widget chat](chat-widget.md).
 4. Dùng các phiên bản đã được duyệt, tương thích của `@superstep/react` và
    `@superstep/sdk`, với peer dependency React/React DOM từ 18, i18next và react-i18next.
 
-Bản chuẩn bị phát hành 0.13.0 gồm TypeScript SDK 0.3.0 và bộ giao diện React
-0.1.4. Để thử các gói từ mã nguồn trong repo:
+Để thử các gói từ mã nguồn trong repo:
 
 ```sh
 npm ci

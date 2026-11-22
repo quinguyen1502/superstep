@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "superstep"
 dynamic = ["version"]
-description = "Python client for Superstep headless chat and workflow runs."
+description = "Python client for Superstep Datasets, headless chat, and workflow runs."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"

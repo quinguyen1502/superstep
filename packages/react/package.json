@@ -1,6 +1,6 @@
 {
   "name": "@superstep/react",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "type": "module",
   "license": "MIT",
   "repository": {
@@ -83,7 +83,7 @@
     "test": "vitest run"
   },
   "peerDependencies": {
-    "@superstep/sdk": "^0.2.0 || ^0.3.0",
+    "@superstep/sdk": "^0.2.0 || ^0.3.0 || ^0.4.0",
     "react": ">=18",
     "react-dom": ">=18",
     "i18next": ">=25",
