@@ -3085,7 +3085,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorEnvelope"];
                 };
             };
-            /** @description DATASET_BINDING_SCHEMA_MISMATCH, DATASET_SCHEMA_CONFLICT, DATASET_RECEIPT_CONFLICT, DATASET_UNIQUE_CONFLICT, DATASET_ROW_LIMIT */
+            /** @description DATASET_BINDING_SCHEMA_MISMATCH, DATASET_SCHEMA_CONFLICT, DATASET_RELATION_REFERENCED, DATASET_RECEIPT_CONFLICT, DATASET_UNIQUE_CONFLICT, DATASET_ROW_LIMIT */
             409: {
                 headers: {
                     [name: string]: unknown;

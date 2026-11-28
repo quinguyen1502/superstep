@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 from ...core.errors import AppError
 from ...schemas.dataset import (
     DatasetBatchUpdate, DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetFormulaPreview, DatasetGrantInput, DatasetTokenInput,
-    DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetGroupsQuery, DatasetGroupRowsQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
+    DatasetOwnerUpdate, DatasetRelationLink, DatasetRowIn, DatasetGroupedRowQuery, DatasetGroupsQuery, DatasetGroupRowsQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
 )
 from ...schemas.dataset_public import DatasetConnectedEnvelope
 from ...schemas.envelope import error_responses
@@ -151,6 +151,7 @@ def remove_column(dataset_id: str, key: str, revision: Revision,
             "DATASET_UPSERT_KEY_INVALID", "DATASET_COLUMN_READ_ONLY", "DATASET_COLUMN_RULE_VIOLATION",
             "DATASET_VALUE_INVALID",
             "DATASET_ROW_NOT_FOUND", "DATASET_BINDING_SCHEMA_MISMATCH", "DATASET_SCHEMA_CONFLICT",
+            "DATASET_RELATION_REFERENCED",
             "DATASET_RECEIPT_CONFLICT", "DATASET_UNIQUE_CONFLICT", "DATASET_ROW_LIMIT",
             "DATASET_ROW_TOO_LARGE", "WORKFLOW_TOO_LARGE", "VALIDATION_ERROR",
         ),
@@ -186,6 +187,31 @@ def query_row_group(dataset_id: str, body: DatasetGroupRowsQuery, user=Depends(c
 @router.post("/{dataset_id}/rows/summary")
 def summarize_rows(dataset_id: str, body: DatasetSummaryQuery, user=Depends(current_user), svc=Depends(dataset_row_service)):
     return svc.summarize(user["id"], dataset_id, **body.model_dump())
+
+
+@router.get("/{dataset_id}/columns/{key}/relation/rows")
+def relation_choices(dataset_id: str, key: str, response: Response, schema_revision: Revision,
+                     search: Annotated[str | None, Query(max_length=120)] = None,
+                     row_ids: Annotated[list[Annotated[str, Query(pattern=r"^[a-f0-9]{32}$")]], Query(max_length=50)] = [],
+                     limit: Annotated[int, Query(ge=1, le=50)] = 25,
+                     offset: Annotated[int, Query(ge=0, le=25_000)] = 0,
+                     user=Depends(current_user), svc=Depends(dataset_row_service)):
+    response.headers["Cache-Control"] = "no-store"
+    return svc.relation_choices(user["id"], dataset_id, key, schema_revision=schema_revision, search=search,
+                                row_ids=row_ids, limit=limit, offset=offset)
+
+
+@router.put("/{dataset_id}/rows/{row_id}/relations/{key}")
+def link_row(dataset_id: str, row_id: str, key: str, body: DatasetRelationLink,
+             user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.set_relation(user["id"], dataset_id, row_id, key, **body.model_dump())
+
+
+@router.delete("/{dataset_id}/rows/{row_id}/relations/{key}")
+def unlink_row(dataset_id: str, row_id: str, key: str, revision: Revision, schema_revision: Revision,
+               user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.set_relation(user["id"], dataset_id, row_id, key, target_row_id=None, revision=revision,
+                            schema_revision=schema_revision)
 
 
 @router.post("/{dataset_id}/rows", status_code=201)

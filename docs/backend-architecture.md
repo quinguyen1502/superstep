@@ -280,3 +280,36 @@ traffic to the share routes before downgrading the migration that stores links.
 `engine/providers.py` is the provider registry (one strategy class per provider: defaults, model listing, LangChain chat model). `engine/llm.py` dispatches LLM nodes to it; `services/credential_service.py` uses it for validation, model lists and connection tests. Engine failures are `ProviderError(code)` and become `AppError` in the service.
 
 Live LLM text: nodes write deltas with LangGraph's `get_stream_writer()` (`custom` stream mode). `engine/runtime.py` yields them as `node_token` events, and `services/run_service.py` sends them to the socket and the run bus but does not store them. Embeddings for knowledge bases go through `Provider.embed()`. The knowledge service keeps one vector dimension per knowledge base (`dims`).
+
+## Dataset Relations
+
+`STUDIO_ENABLE_DATASET_RELATIONS=1` enables preview authoring through the
+authenticated Dataset API. A Relation column has an immutable target Dataset
+and an active text display column in the same personal or team scope. Schema
+and row edits use the existing Dataset and row revisions. A stored link is
+one record in `dataset_relation_edges`; row JSON does not duplicate its target
+ID. Authenticated row projections include the target row ID. Filters compare
+that identity before paging.
+
+Set a link with `PUT /api/datasets/{id}/rows/{row}/relations/{field}` and a
+`target_row_id`, `revision` and `schema_revision`. Clear it with `DELETE` on the
+same route and the two revisions as query parameters. Readers resolve labels
+with `GET /api/datasets/{id}/columns/{field}/relation/rows` and the source
+`schema_revision`. It accepts `search`, repeated `row_ids`, `limit` and
+`offset`, requires access to the target Dataset and returns at most 50
+identities and labels per page. Labels in this response are limited to 256
+characters and served without caching. Dataset tokens and public share
+capabilities cannot use the lookup route. CSV exports include Relation IDs.
+CSV import cannot create Relation columns or populate links. The preview flag
+can be turned off while existing definitions remain readable and existing links
+can be cleared.
+
+Link creation and definition changes lock the participating Datasets in
+ascending ID order and revalidate scope, access and target existence. Row
+deletes look for inbound edges under the target lock. Referenced display
+columns and target Datasets are protected while a source definition exists.
+Account and team cleanup remove outgoing edges within the deletion set
+before deleting their rows. Migration `0075_dataset_relations` adds the
+metadata fields and edge indexes on both database engines. To downgrade,
+freeze Relation writes and remove the Relation definitions or restore a
+pre-Relation backup. Active definitions or edges stop the downgrade.

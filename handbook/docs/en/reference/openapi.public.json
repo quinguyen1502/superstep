@@ -3483,7 +3483,7 @@
             }
           },
           "409": {
-            "description": "DATASET_BINDING_SCHEMA_MISMATCH, DATASET_SCHEMA_CONFLICT, DATASET_RECEIPT_CONFLICT, DATASET_UNIQUE_CONFLICT, DATASET_ROW_LIMIT",
+            "description": "DATASET_BINDING_SCHEMA_MISMATCH, DATASET_SCHEMA_CONFLICT, DATASET_RELATION_REFERENCED, DATASET_RECEIPT_CONFLICT, DATASET_UNIQUE_CONFLICT, DATASET_ROW_LIMIT",
             "content": {
               "application/json": {
                 "examples": {
@@ -3502,6 +3502,15 @@
                       "error": {
                         "code": "DATASET_SCHEMA_CONFLICT",
                         "message": "The dataset changed. Reload its definition and try again"
+                      }
+                    }
+                  },
+                  "DATASET_RELATION_REFERENCED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DATASET_RELATION_REFERENCED",
+                        "message": "Remove the referencing relations before deleting this item"
                       }
                     }
                   },

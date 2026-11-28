@@ -65,6 +65,8 @@ def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
         return ("eq", "ne", "is_null", "not_null", "in", "not_in")
     if kind == "multi_select":
         return ("contains_any", "contains_all", "is_null")
+    if kind == "relation":
+        return ("eq", "ne", "is_null", "not_null")
     return tuple(op for op in FILTER_OPERATORS if op not in {"contains_any", "contains_all"}
                  and (op not in {"contains", "not_contains"} or kind in TEXT_KINDS))
 
@@ -100,6 +102,8 @@ def normalize_cell(key: str, kind: ColumnKind, value: DatasetValue, options: lis
         if -MAX_SAFE_INTEGER <= value <= MAX_SAFE_INTEGER and math.isfinite(value):
             return value
     if isinstance(value, str) and not INVALID_TEXT.search(value):
+        if kind == "relation" and re.fullmatch(r"[a-f0-9]{32}", value):
+            return value
         if kind in {"text", "long_text"} and len(value) <= MAX_TEXT:
             return value
         if kind == "select" and value in options:

@@ -237,6 +237,7 @@ export function DatasetColumnFields({ column, onChange, existing, formulaEnabled
         <SelectTrigger id={`${id}-kind`} className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>
           {datasetKinds.map(kind => <SelectItem value={kind} key={kind}><DatasetFieldIcon kind={kind} /><span>{t(`dataset.kind.${kind}`)}</span></SelectItem>)}
+          {column.kind === 'relation' && <SelectItem value="relation"><DatasetFieldIcon kind="relation" />{t('dataset.kind.relation')}</SelectItem>}
           {(formulaEnabled || !!column.formula) && <SelectItem value="formula"><DatasetFieldIcon kind="formula" />{t('dataset.formula.type')}</SelectItem>}
         </SelectContent>
       </Select>

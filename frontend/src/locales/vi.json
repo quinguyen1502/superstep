@@ -483,6 +483,7 @@
     "kind": {
       "multi_select": "Chọn nhiều",
       "auto_number": "Số tự động",
+      "relation": "Liên kết",
       "long_text": "Văn bản dài",
       "url": "Địa chỉ web",
       "created_time": "Thời điểm tạo",
@@ -972,6 +973,9 @@
     "DATASET_COLUMN_NOT_FOUND": "Không tìm thấy cột trong tập dữ liệu",
     "DATASET_COLUMN_READ_ONLY": "Cột {{field}} của tập dữ liệu chỉ có thể đọc.",
     "DATASET_FORMULA_DISABLED": "Cấu hình công thức cho tập dữ liệu đang tắt.",
+    "DATASET_RELATION_DISABLED": "Tính năng liên kết tập dữ liệu đang tắt",
+    "DATASET_RELATION_TARGET_INVALID": "Không thể truy cập đích của liên kết",
+    "DATASET_RELATION_REFERENCED": "Hãy gỡ các liên kết tham chiếu trước khi xoá mục này",
     "DATASET_FORMULA_INVALID": "Công thức của cột {{field}} trong tập dữ liệu không hợp lệ.",
     "DATASET_COLUMN_RULE_VIOLATION": "Giá trị vi phạm quy tắc kiểm tra của cột {{field}}.",
     "DATASET_COLUMN_RULE_EXISTING_ROWS": "{{count}} dòng hiện tại vi phạm quy tắc của cột {{field}}.",
