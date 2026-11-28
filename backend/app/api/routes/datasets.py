@@ -5,9 +5,11 @@ from fastapi import APIRouter, Depends, Header, Query, Response
 
 from ...core.errors import AppError
 from ...schemas.dataset import (
-    DatasetBatchUpdate, DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetGrantInput, DatasetTokenInput,
+    DatasetBatchUpdate, DatasetColumnUpdate, DatasetConnectedInput, DatasetCreate, DatasetCsvInput, DatasetFormulaPreview, DatasetGrantInput, DatasetTokenInput,
     DatasetOwnerUpdate, DatasetRowIn, DatasetGroupedRowQuery, DatasetGroupsQuery, DatasetGroupRowsQuery, DatasetRowUpdate, DatasetRowUpsert, DatasetSummaryQuery, DatasetUpdate,
 )
+from ...schemas.dataset_public import DatasetConnectedEnvelope
+from ...schemas.envelope import error_responses
 from ..deps import current_user, dataset_access_service, dataset_connected_service, dataset_csv_service, dataset_row_service, dataset_service, limit_body
 
 router = APIRouter(prefix="/api/datasets", tags=["datasets"])
@@ -88,6 +90,13 @@ def export_csv(dataset_id: str, user=Depends(current_user), svc=Depends(dataset_
     })
 
 
+@router.get("/{dataset_id}/revisions")
+def dataset_revisions(dataset_id: str, response: Response, user=Depends(current_user), svc=Depends(dataset_service)):
+    marker = svc.revisions(user["id"], dataset_id)
+    response.headers["Cache-Control"] = "no-store"
+    return marker
+
+
 @router.get("/{dataset_id}")
 def get_dataset(dataset_id: str, user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.get(user["id"], dataset_id)
@@ -109,6 +118,11 @@ def delete_dataset(dataset_id: str, revision: Revision,
     return svc.delete(user["id"], dataset_id, revision)
 
 
+@router.post("/{dataset_id}/columns/formula/preview", dependencies=[Depends(limit_body)])
+def preview_formula(dataset_id: str, body: DatasetFormulaPreview, user=Depends(current_user), svc=Depends(dataset_row_service)):
+    return svc.preview_formula(user["id"], dataset_id, **body.model_dump())
+
+
 @router.post("/{dataset_id}/columns", status_code=201)
 def add_column(dataset_id: str, body: DatasetColumnUpdate, user=Depends(current_user), svc=Depends(dataset_service)):
     return svc.add_column(user["id"], dataset_id, **body.model_dump())
@@ -126,7 +140,22 @@ def remove_column(dataset_id: str, key: str, revision: Revision,
     return svc.remove_column(user["id"], dataset_id, key, revision)
 
 
-@router.post("/{dataset_id}/connected", dependencies=[Depends(limit_body)])
+@router.post(
+    "/{dataset_id}/connected", dependencies=[Depends(limit_body)],
+    summary="Execute a Dataset operation",
+    responses={
+        200: {"model": DatasetConnectedEnvelope, "description": "The result of the requested Dataset operation."},
+        **error_responses(
+            "AUTH_REQUIRED", "AUTH_TOKEN_INVALID", "DATASET_TOKEN_SCOPE", "DATASET_GRANT_DENIED",
+            "DATASET_NODE_ARGUMENTS_INVALID", "DATASET_FILTER_INVALID", "DATASET_SUMMARY_INVALID",
+            "DATASET_UPSERT_KEY_INVALID", "DATASET_COLUMN_READ_ONLY", "DATASET_COLUMN_RULE_VIOLATION",
+            "DATASET_VALUE_INVALID",
+            "DATASET_ROW_NOT_FOUND", "DATASET_BINDING_SCHEMA_MISMATCH", "DATASET_SCHEMA_CONFLICT",
+            "DATASET_RECEIPT_CONFLICT", "DATASET_UNIQUE_CONFLICT", "DATASET_ROW_LIMIT",
+            "DATASET_ROW_TOO_LARGE", "WORKFLOW_TOO_LARGE", "VALIDATION_ERROR",
+        ),
+    },
+)
 def execute_connected(dataset_id: str, body: DatasetConnectedInput, response: Response,
                       authorization: Annotated[str | None, Header()] = None,
                       svc=Depends(dataset_connected_service)):

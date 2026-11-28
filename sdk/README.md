@@ -1,7 +1,7 @@
 # Superstep SDKs
 
-Clients for the public workflow-trigger API (`/api/hooks/*`), generated from
-and checked against [`docs/api/openapi.public.json`](../docs/api/openapi.public.json).
+Clients for the workflow-trigger, Chat v1, and Dataset Connected v1 APIs,
+generated from and checked against [`docs/api/openapi.public.json`](../docs/api/openapi.public.json).
 
 | Folder | Package | Docs |
 | --- | --- | --- |

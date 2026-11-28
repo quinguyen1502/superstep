@@ -5,32 +5,14 @@ from urllib.parse import urlsplit
 from starlette.datastructures import MutableHeaders
 from starlette.requests import Request
 from starlette.responses import Response
-from ..core import config
 from ..core.client_ip import client_ip
 from ..core.errors import AppError
 from .error_handlers import respond
+from .origin import matches_origin, same_origin as same_chat_origin
 
 CHAT_PATH = re.compile(r"^/api/public/(?:v1/)?chat/([^/]+)(?:/|$)")
 METHODS = "GET, POST, PUT, DELETE, OPTIONS"
 HEADERS = "Authorization, Content-Type, X-Requested-With, X-Chat-Visitor"
-
-
-def _matches_chat_origin(connection, origin: str) -> bool:
-    try:
-        parsed = urlsplit(origin)
-        if parsed.scheme not in ("http", "https") or parsed.username or parsed.password or parsed.path or parsed.query or parsed.fragment: return False
-        scheme = {"ws": "http", "wss": "https"}.get(connection.url.scheme, connection.url.scheme)
-        expected = urlsplit(f"{scheme}://{connection.headers.get('host', '')}")
-        own = parsed.scheme == expected.scheme and parsed.hostname == expected.hostname and (parsed.port or (443 if parsed.scheme == "https" else 80)) == (expected.port or (443 if scheme == "https" else 80))
-        # The configured public URL describes a trusted reverse proxy's external origin.
-        return own or bool(config.public_url() and origin.rstrip("/") == config.public_url())
-    except ValueError: return False
-
-
-def same_chat_origin(connection) -> bool:
-    origin = connection.headers.get("origin")
-    # Native/server clients send no Origin; app keys still enforce their origin policy.
-    return not origin or _matches_chat_origin(connection, origin)
 
 
 def chat_request_origin(request) -> str | None:
@@ -46,7 +28,7 @@ def chat_request_origin(request) -> str | None:
         referrer = urlsplit(request.headers.get("referer", ""))
         if referrer.scheme not in ("http", "https") or not referrer.netloc or referrer.username or referrer.password: return None
         candidate = f"{referrer.scheme}://{referrer.netloc}"
-        return candidate if _matches_chat_origin(request, candidate) else None
+        return candidate if matches_origin(request, candidate) else None
     except ValueError: return None
 
 

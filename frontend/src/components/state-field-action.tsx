@@ -29,8 +29,8 @@ export function StateFieldPicker({ value, onChange, options, types = TYPES, id, 
 }
 
 /** Explicit, undoable schema creation. Outside the editable Studio graph there is no mutation capability. */
-export function StateFieldAction({ types = TYPES, onCreated, compact = true, size = 'icon', className }: {
-  types?: string[]; onCreated?: (name: string, field: Field) => void; compact?: boolean; size?: 'icon' | 'icon-xs'; className?: string
+export function StateFieldAction({ types = TYPES, onCreated, compact = true, size = 'icon', variant = 'outline', className }: {
+  types?: string[]; onCreated?: (name: string, field: Field) => void; compact?: boolean; size?: 'icon' | 'icon-xs'; variant?: 'outline' | 'ghost'; className?: string
 }) {
   const studio = useContext(StudioContext); const { t } = useTranslation(); const id = useId()
   const [open, setOpen] = useState(false); const [name, setName] = useState(''); const [type, setType] = useState(types[0] || 'string')
@@ -44,7 +44,7 @@ export function StateFieldAction({ types = TYPES, onCreated, compact = true, siz
     studio.setState(fields => [...fields, field]); onCreated?.(value, field); setOpen(false)
   }
   return <>
-    <Button type="button" variant="outline" size={compact ? size : 'default'} className={className || (compact ? undefined : 'w-full')}
+    <Button type="button" variant={variant} size={compact ? size : 'default'} className={className || (compact ? undefined : 'w-full')}
       aria-label={t(compact ? 'editor.newField.title' : 'editor.addField')} title={t('editor.newField.title')} onClick={() => { setName(''); setType(types[0]); setOpen(true) }}>
       <Plus />{!compact && t('editor.addField')}
     </Button>

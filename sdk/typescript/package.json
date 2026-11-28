@@ -1,6 +1,6 @@
 {
   "name": "@superstep/sdk",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Headless chat and workflow runs for the Superstep public API.",
   "license": "MIT",
   "author": "Qui Nguyen",
@@ -61,8 +61,8 @@
     "gen:check": "node scripts/gen-check.mjs && node scripts/gen-chat.mjs --check",
     "build": "rm -rf dist && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json && node scripts/cjs-package.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
-    "test": "vitest run --exclude test/integration.test.ts --exclude test/chat-integration.test.ts",
-    "test:integration": "vitest run test/integration.test.ts test/chat-integration.test.ts",
+    "test": "vitest run --exclude test/integration.test.ts --exclude test/chat-integration.test.ts --exclude test/dataset-integration.test.ts",
+    "test:integration": "vitest run test/integration.test.ts test/chat-integration.test.ts test/dataset-integration.test.ts",
     "test:package": "node scripts/smoke-package.mjs",
     "prepublishOnly": "npm run build"
   },

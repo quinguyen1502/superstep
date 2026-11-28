@@ -5,12 +5,12 @@ import re
 from dataclasses import dataclass
 
 from ..core import permissions as P
-from ..core.dataset_types import INVALID_TEXT, MAX_ROW_BYTES, READ_ONLY_KINDS, DatasetValue, dataset_size, key_digest, normalize_cell
+from ..core.dataset_types import INVALID_TEXT, MAX_COLUMNS, MAX_ROW_BYTES, DatasetValue, dataset_size, key_digest, normalize_cell
 from ..core.errors import AppError
 from ..models.dataset import DatasetColumn
 from ..repositories.dataset_rows import DatasetRowRepository
 from .dataset_rows import _row_values, _active_columns, _normalize
-from .dataset_service import MAX_COLUMNS, DatasetService, _detail
+from .dataset_service import DatasetService, _detail
 
 MAX_CSV_BYTES = 1_048_576
 MAX_CSV_RECORDS = 1_000
@@ -159,7 +159,7 @@ class DatasetCsvService:
             }
             dataset = self.datasets.prepare_create(uid, **definition)
         columns = _active_columns(dataset)
-        writable = {key: column for key, column in columns.items() if column.kind not in READ_ONLY_KINDS}
+        writable = {key: column for key, column in columns.items() if not column.read_only}
         if mapping is None:
             mapping = _suggest_mapping(table.headers, list(writable.values())) if dataset_id or create else list(columns)
         mapped = [key for key in mapping if key is not None]
@@ -228,6 +228,8 @@ class DatasetCsvService:
             raise AppError("DATASET_CSV_ROWS_INVALID", details={"issues": preview["issues"]})
         create = params["dataset_id"] is None
         self.rows.import_rows(uid, dataset, values, create=create)
+        if create or values:
+            self.datasets.notify_changed(dataset.id)
         if create:
             self.datasets.audit.record(uid, "dataset.create", "dataset", dataset.id)
         self.datasets.audit.record(uid, "dataset.csv_import", "dataset", dataset.id, rows=len(values))

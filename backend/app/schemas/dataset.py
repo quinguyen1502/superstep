@@ -5,11 +5,19 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..core.dataset_filters import MAX_FILTER_VALUES, tree_rules
-from ..core.dataset_types import COLUMN_KEY_PATTERN, CellValue, ColumnKind, DatasetValue, FilterOperator, SummaryFunction
+from ..core.dataset_formula import MAX_SOURCE
+from ..core.dataset_types import COLUMN_KEY_PATTERN, MAX_COLUMNS, CellValue, ColumnKind, DatasetValue, FilterOperator, SummaryFunction
 
 ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]
 Label = Annotated[str, Field(min_length=1, max_length=120)]
 Option = Annotated[str, Field(min_length=1, max_length=120)]
+
+
+class DatasetFormula(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    version: Literal[1] = 1
+    expression: Annotated[str, Field(min_length=1, max_length=MAX_SOURCE)]
 
 
 class DatasetFieldContract(BaseModel):
@@ -21,6 +29,7 @@ class DatasetFieldContract(BaseModel):
     unique: bool = False
     default: DatasetValue = None
     options: list[Option] = Field(default_factory=list, max_length=100)
+    formula: DatasetFormula | None = None
 
 
 class DatasetColumnRules(BaseModel):
@@ -59,7 +68,7 @@ class DatasetCreate(BaseModel):
     name: Label
     description: str | None = Field(default=None, max_length=2_000)
     team_id: str | None = Field(default=None, min_length=1, max_length=100)
-    columns: list[DatasetColumnIn] = Field(default_factory=list, max_length=100)
+    columns: list[DatasetColumnIn] = Field(default_factory=list, max_length=MAX_COLUMNS)
 
 
 class DatasetUpdate(BaseModel):
@@ -85,6 +94,21 @@ class DatasetColumnUpdate(BaseModel):
 
 
 RowValues = Annotated[dict[ColumnKey, DatasetValue], Field(max_length=100)]
+
+
+class DatasetFormulaPreview(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    revision: int = Field(ge=1)
+    column: DatasetColumnIn
+    row_id: str | None = Field(default=None, min_length=1, max_length=100)
+    sample: RowValues = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def one_input(self):
+        if self.row_id is not None and self.sample:
+            raise ValueError("Choose a row or sample values")
+        return self
 
 
 class DatasetRowIn(BaseModel):

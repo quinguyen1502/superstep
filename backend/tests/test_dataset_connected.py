@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import json
 
+from jsonschema import Draft202012Validator
 from sqlalchemy import select
 
 from app.models import AuditEvent
@@ -144,3 +145,53 @@ def test_connected_schema_and_scope_fail_explicitly(client):
     assert post(client, base, read, lookup).status_code == 200
     call(client, "DELETE", f"{base}/columns/score?revision={renamed['revision']}")
     error(post(client, base, read, lookup), 409, "DATASET_BINDING_SCHEMA_MISMATCH")
+
+
+def test_public_openapi_examples_match_the_live_connected_contract(client):
+    spec = client.get("/openapi.public.json").json()
+    route = spec["paths"]["/api/datasets/{dataset_id}/connected"]["post"]
+    request_content = route["requestBody"]["content"]["application/json"]
+    request_schema = Draft202012Validator({**request_content["schema"], "components": spec["components"]})
+    response_content = route["responses"]["200"]["content"]["application/json"]
+    response_schema = Draft202012Validator({**response_content["schema"], "components": spec["components"]})
+    examples = {name: example["value"] for name, example in request_content["examples"].items()}
+    columns = [{**field, "label": field["key"].title()} for field in examples["insert_row"]["columns"]]
+    data = create(client, name="OpenAPI example", columns=columns)
+    base = f"/api/datasets/{data['id']}"
+    writer = token(client, base, "write")["token"]
+    reader = token(client, base, "read")["token"]
+    read_writer = token(client, base)["token"]
+    remover = token(client, base, "write", allow_delete=True)["token"]
+
+    def execute(operation, secret, **overrides):
+        payload = {**examples[operation], **overrides}
+        request_schema.validate(payload)
+        response = post(client, base, secret, payload)
+        assert response.status_code == 200, response.text
+        body = response.json()
+        response_schema.validate(body)
+        return body["data"]
+
+    inserted = execute("insert_row", writer)
+    assert inserted["inserted"] and set(inserted["row"]) == {"id", "revision"}
+    row_id = inserted["row"]["id"]
+    got = execute("get_row", reader, arguments={"row_id": row_id})
+    assert got["id"] == row_id and got["values"] == examples["insert_row"]["arguments"]["values"]
+    assert execute("find_rows", reader)["items"] == [got]
+    assert execute("aggregate_rows", reader)["groups"] == [{"group": None, "total": 1, "values": {"ticket": 1}}]
+    upsert = execute("upsert_row", read_writer)
+    assert not upsert["inserted"] and upsert["row"] == got
+    assert execute("delete_row", remover) == {"row_id": row_id, "deleted": True}
+    assert execute("insert_row", writer) == inserted
+
+    lookup = {k: v for k, v in examples["find_rows"].items() if k != "arguments"}
+    assert execute("find_rows", reader, operation_id=None)["items"] == []
+    request_schema.validate(lookup)
+    assert post(client, base, reader, lookup).status_code == 200
+
+    bad = {**examples["delete_row"], "arguments": {"row_id": row_id, **examples["delete_row"]["arguments"]}}
+    assert not request_schema.is_valid(bad)
+    response = post(client, base, remover, bad)
+    error(response, 400, "DATASET_NODE_ARGUMENTS_INVALID")
+    error_schema = route["responses"]["400"]["content"]["application/json"]["schema"]
+    Draft202012Validator({**error_schema, "components": spec["components"]}).validate(response.json())

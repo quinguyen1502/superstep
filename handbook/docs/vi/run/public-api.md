@@ -225,8 +225,7 @@ có trang SDK headless, [bộ giao diện React](chat-react.md) và
 mẫu local; thay phần mẫu trước khi triển khai hệ thống tài khoản. CI lưu screenshot dưới dạng artifact tải
 về, không đưa ảnh vào Git.
 
-Bản chuẩn bị phát hành 0.13.0 gồm TypeScript SDK 0.3.0 và Python SDK 0.13.0.
-Python dùng cùng phiên bản với CLI và máy chủ.
+Python SDK, CLI và máy chủ dùng cùng số phiên bản. TypeScript SDK được đánh số phiên bản riêng.
 
 ## Lịch chạy
 
@@ -267,6 +266,48 @@ mọi process đều đặt `STUDIO_WORKER=0`, lịch được lưu nhưng khôn
 
 `list_schedules()` / `listSchedules()` trả về các lịch của workflow.
 `preview_schedule` / `previewSchedule` trả về các lần chạy tới.
+
+## Datasets
+
+Tạo token trong **Datasets → Access → Dataset API tokens**. Cấp quyền đọc
+cho Find, Get hoặc Aggregate, quyền ghi cho Insert hoặc Upsert, hoặc bật
+**Allow row deletion** cho Delete. Dùng token riêng cho mỗi tích hợp và lưu
+ở máy chủ. ID của Dataset và khai báo cột phải khớp với Dataset đích. Lấy
+khai báo cột từ schema hoặc từ file `datasets.json` của bản export Connected.
+
+```python
+import os
+from superstep import DatasetClient
+
+with DatasetClient(
+    base_url=os.environ["SUPERSTEP_BASE_URL"],
+    dataset_id=os.environ["SUPERSTEP_DATASET_ID"],
+    token=os.environ["SUPERSTEP_DATASET_READ_TOKEN"],
+    columns=[{"key": "ticket", "kind": "text", "unique": True, "required": True}],
+) as tickets:
+    page = tickets.find_rows(["ticket"], {"limit": 10})
+```
+
+```ts
+import { DatasetClient } from '@superstep/sdk'
+
+const tickets = new DatasetClient({
+  baseUrl: process.env.SUPERSTEP_BASE_URL!,
+  datasetId: process.env.SUPERSTEP_DATASET_ID!,
+  token: process.env.SUPERSTEP_DATASET_WRITE_TOKEN!,
+  columns: [{ key: 'ticket', kind: 'text', unique: true, required: true }],
+})
+const { row } = await tickets.insertRow({ ticket: 'T-42' }, { operationId: 'import:T-42' })
+console.log(row.id, row.revision)
+```
+
+Dùng `AsyncDatasetClient` và `async with` cho Python async. Thao tác ghi mặc
+định chỉ trả ID và revision. Token có quyền đọc và ghi có thể truyền `fields`
+để nhận giá trị các ô. Nếu request ghi có thể đã đến máy chủ, dùng lại cùng
+`operation_id` (Python) hoặc `operationId` (TypeScript), đối số và `fields` để
+thử lại trong thời gian máy chủ còn lưu receipt.
+
+[Tham chiếu Dataset Connected v1](../reference/public-api.md).
 
 ## Lỗi
 

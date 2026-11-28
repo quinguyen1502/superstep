@@ -250,7 +250,7 @@ export function DatasetNodeData({ data, binding, state, disabled, onChange }: {
       </div>}
       {datasetWriteOperation(operation) && <fieldset className="space-y-2">
         <legend className="mb-2 text-sm font-medium">{t('datasetNode.mappedFields')}</legend>
-        {columns.filter(column => !datasetReadOnly(column.kind)).map(column => {
+        {columns.filter(column => !datasetReadOnly(column)).map(column => {
           const mapped = Object.hasOwn(values, column.key)
           return <div key={column.key} className="space-y-2 rounded-md border p-2">
             <Label className="gap-1.5"><Checkbox checked={mapped} disabled={disabled || (operation === 'upsert_row' && args.key === column.key)} onCheckedChange={checked => {

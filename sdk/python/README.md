@@ -1,6 +1,6 @@
 # superstep (Python SDK)
 
-Python client for Superstep workflow runs and headless chat v1. Sync and async
+Python client for Superstep Datasets, workflow runs, and headless chat v1. Sync and async
 clients, typed results/errors; the base dependency is `httpx`. Socket streaming
 uses the optional `superstep[chat]` extra. The package shares its version with
 the CLI/server; chat ships in the next owner-approved release, not a downgrade
@@ -19,6 +19,45 @@ pip install ./sdk/python
 ```
 
 Python 3.9 or later.
+
+## Datasets
+
+Create a Dataset API token in **Datasets → Access → Dataset API tokens**. Use the
+destination Dataset's ID and the column contract from your schema or a connected
+export's `datasets.json`. Use an HTTPS URL for a deployed server.
+
+```python
+import os
+from superstep import DatasetClient, DatasetColumn
+
+binding: list[DatasetColumn] = [{"key": "ticket", "kind": "text", "unique": True, "required": True}]
+base_url = os.environ["SUPERSTEP_BASE_URL"]
+dataset_id = os.environ["SUPERSTEP_DATASET_ID"]
+with DatasetClient(base_url=base_url, dataset_id=dataset_id, columns=binding,
+                   token=os.environ["SUPERSTEP_DATASET_READ_TOKEN"]) as reader:
+    page = reader.find_rows(["ticket"], {"limit": 10})
+    print(page["items"], page["next_offset"])
+
+with DatasetClient(base_url=base_url, dataset_id=dataset_id, columns=binding,
+                   token=os.environ["SUPERSTEP_DATASET_WRITE_TOKEN"]) as writer:
+    result = writer.insert_row({"ticket": "T-42"}, operation_id="import:T-42")
+    print(result["row"]["id"], result["row"]["revision"])
+```
+
+`AsyncDatasetClient` accepts the same options. Use `async with` and await its
+methods. Both clients also provide `get_row`, `aggregate_rows`, `upsert_row`,
+and `delete_row`. Delete accepts `{"row_id": id}` or a unique `{"key": key,
+"value": value}` and requires the token's **Allow row deletion** capability.
+
+Read operations take a field projection. Insert and Upsert default to an empty
+projection and return a row ID and revision. Use a token with read and write
+access and pass `fields=[...]` to request row values.
+
+The client retries network failures and HTTP 502, 503, or 504 once with the
+same request. Pass a stable `operation_id` when you need to recover a write
+across separate calls. Otherwise, each write gets a fresh ID. Reuse the same
+arguments and fields on recovery. Server errors preserve their `code`,
+`status`, and `details` on `SuperstepError`.
 
 ## Chat
 

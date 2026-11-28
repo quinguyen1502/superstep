@@ -2,6 +2,7 @@
 import asyncio, logging
 from .api.body_limit import BodyLimit
 from .api.chat_cors import ChatCors
+from .api.dataset_share_http import DatasetShareHeaders
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -75,6 +76,7 @@ def create_app() -> FastAPI:
     register_error_handlers(app)
     app.add_middleware(BodyLimit)  # request body ceilings without a proxy too
     app.add_middleware(ChatCors, public=public_chat_service)
+    app.add_middleware(DatasetShareHeaders)
     if config.demo_mode(): install_demo_guard(app)  # STUDIO_DEMO_MODE: the shared visitor account is read-only
     app.add_middleware(HttpMetrics, telemetry=lambda: deps.get_telemetry())  # every response, by route template
     app.add_middleware(HttpSpans, telemetry=lambda: deps.get_telemetry())  # opt-in server spans (STUDIO_OTEL_INSTRUMENT)

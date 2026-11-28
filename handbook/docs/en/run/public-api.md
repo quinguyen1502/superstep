@@ -225,8 +225,7 @@ serves a headless SDK portal, [React toolkit](chat-react.md) page and
 sign-in demonstration; replace its stub before deploying an account system. CI keeps screenshots as
 downloadable artifacts, outside Git.
 
-The 0.13.0 release candidate includes TypeScript SDK 0.3.0 and Python SDK 0.13.0.
-Python uses the same version as the CLI and server.
+The Python SDK, CLI and server share a version number. The TypeScript SDK is versioned independently.
 
 ## Schedules
 
@@ -267,6 +266,49 @@ on every process, a schedule is stored and does not fire.
 
 `list_schedules()` / `listSchedules()` returns the workflow's schedules.
 `preview_schedule` / `previewSchedule` returns the next fire times.
+
+## Datasets
+
+Create a token under **Datasets → Access → Dataset API tokens**. Give it read
+permission for Find, Get, or Aggregate, write permission for Insert or Upsert,
+or **Allow row deletion** for Delete. Use a separate token for each integration
+and keep it on your server. The Dataset ID and the explicit column binding
+must match the destination. Use the field contract from your schema or a
+connected export's `datasets.json`.
+
+```python
+import os
+from superstep import DatasetClient
+
+with DatasetClient(
+    base_url=os.environ["SUPERSTEP_BASE_URL"],
+    dataset_id=os.environ["SUPERSTEP_DATASET_ID"],
+    token=os.environ["SUPERSTEP_DATASET_READ_TOKEN"],
+    columns=[{"key": "ticket", "kind": "text", "unique": True, "required": True}],
+) as tickets:
+    page = tickets.find_rows(["ticket"], {"limit": 10})
+```
+
+```ts
+import { DatasetClient } from '@superstep/sdk'
+
+const tickets = new DatasetClient({
+  baseUrl: process.env.SUPERSTEP_BASE_URL!,
+  datasetId: process.env.SUPERSTEP_DATASET_ID!,
+  token: process.env.SUPERSTEP_DATASET_WRITE_TOKEN!,
+  columns: [{ key: 'ticket', kind: 'text', unique: true, required: true }],
+})
+const { row } = await tickets.insertRow({ ticket: 'T-42' }, { operationId: 'import:T-42' })
+console.log(row.id, row.revision)
+```
+
+Use `AsyncDatasetClient` and `async with` for async Python. Writes default to
+identifiers only. A token with read and write permission can request row
+values by passing `fields`. When a write may have reached the server, reuse
+the same `operation_id` (Python) or `operationId` (TypeScript), arguments, and
+fields to recover it within the receipt retention window.
+
+[Dataset Connected v1 API reference](../reference/public-api.md).
 
 ## Errors
 

@@ -1,7 +1,6 @@
 # @superstep/sdk (TypeScript SDK)
 
-Headless chat, runs, and schedules for Superstep. Version 0.3.0 adds workflow-scoped
-cron schedule management and preview.
+Dataset access, headless chat, runs, and cron schedule management for Superstep.
 Zero runtime dependencies; ESM and CommonJS; HTTP types generated from OpenAPI
 and socket types generated from the backend JSON Schemas. Chat uses `fetch` and
 an injectable WebSocket in browsers, Node 18+ and React Native.
@@ -16,8 +15,46 @@ an injectable WebSocket in browsers, Node 18+ and React Native.
 npm install @superstep/sdk
 ```
 
-The examples below describe 0.3.0; installing from npm requires that version to
-have been published by the owner. Building this repository does not publish it.
+The examples below describe the SDK in this checkout. To try changes before
+publication, build the package from this repository.
+
+## Datasets
+
+Create a Dataset API token in **Datasets → Access → Dataset API tokens**. Use it
+from your server with the Dataset ID and the column contract from the schema or
+from a connected export's `datasets.json`. Use an HTTPS URL for a deployed server.
+
+```ts
+import { DatasetClient, type DatasetColumn } from '@superstep/sdk'
+
+const columns: DatasetColumn[] = [
+  { key: 'ticket', kind: 'text', unique: true, required: true },
+]
+const connection = {
+  baseUrl: process.env.SUPERSTEP_BASE_URL!,
+  datasetId: process.env.SUPERSTEP_DATASET_ID!,
+  columns,
+}
+const reader = new DatasetClient({ ...connection, token: process.env.SUPERSTEP_DATASET_READ_TOKEN! })
+const page = await reader.findRows(['ticket'], { limit: 10 })
+console.log(page.items, page.next_offset)
+
+const writer = new DatasetClient({ ...connection, token: process.env.SUPERSTEP_DATASET_WRITE_TOKEN! })
+const result = await writer.insertRow({ ticket: 'T-42' }, { operationId: 'import:T-42' })
+console.log(result.row.id, result.row.revision)
+```
+
+The client also exposes `getRow`, `aggregateRows`, `upsertRow`, and `deleteRow`.
+Delete takes a row ID target `{ row_id: id }` or a unique target `{ key, value }`,
+and requires the token's **Allow row deletion** capability. Read operations
+take a field projection. Insert and Upsert default to an empty projection and
+return a row ID and revision. Pass `fields` with a read/write token to receive
+row values. Each operation accepts an `AbortSignal` through its options.
+
+The client retries network failures and HTTP 502, 503, or 504 once with the
+same request. Pass a stable `operationId` to recover a write across separate
+calls. Otherwise, each write gets a fresh ID. Reuse the same arguments and
+fields on recovery. Server errors expose `code`, `status`, and `details`.
 
 ## Chat
 

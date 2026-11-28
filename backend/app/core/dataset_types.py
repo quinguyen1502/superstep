@@ -69,6 +69,7 @@ def filter_operators(kind: ColumnKind) -> tuple[str, ...]:
                  and (op not in {"contains", "not_contains"} or kind in TEXT_KINDS))
 
 COLUMN_KEY_PATTERN = r"^[a-z][a-z0-9_]{0,62}$"
+MAX_COLUMNS = 100
 MAX_ROW_BYTES = 65_536
 MAX_PAGE_BYTES = 1_048_576
 MAX_TEXT = 16_384

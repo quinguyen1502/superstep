@@ -25,6 +25,7 @@ nối duyệt, việc tạo workflow và mọi trang quản trị. Chế độ d
 | Dữ liệu của khách | Tài khoản khách cũ hơn `STUDIO_DEMO_VISITOR_TTL` giây (mặc định 86400, một ngày) bị xoá cùng các run và cuộc trò chuyện, mỗi lần khởi động và mỗi lần đăng nhập demo. |
 | Giới hạn tần suất | `STUDIO_DEMO_RUN_RATE_LIMIT` run mỗi IP mỗi phút (mặc định 20; `RATE_LIMITED`). |
 | Workflow mẫu | Example, Chatbot (kiểu chat: `message` vào, `answer` ra, bật chat web cho khung Chat), Router và Approval flow được tạo và chia sẻ cho khách mỗi lần khởi động, vì gói miễn phí xoá file SQLite khi dịch vụ nghỉ. |
+| Dataset mẫu | Trong **Datasets**, mở **Support tickets** để xem 125 phiếu hỗ trợ giả lập và thử tìm kiếm, lọc, sắp xếp, nhóm và tổng hợp theo cột. Chọn **Xuất CSV** trong menu thao tác của dataset để tải dữ liệu. Dataset được tạo khi khởi động demo và khách chỉ có quyền đọc trong Studio. Workflow vẫn không thể thực hiện thao tác Dataset trong chế độ demo. |
 | Thông báo | Mọi trang có một thông báo nhỏ: đây là bản demo, dữ liệu được đặt lại, lần tải đầu có thể mất khoảng 30 giây. |
 
 Admin (`STUDIO_ADMIN_EMAILS` cùng `STUDIO_ADMIN_PASSWORD` cố định) là tài khoản bình thường,

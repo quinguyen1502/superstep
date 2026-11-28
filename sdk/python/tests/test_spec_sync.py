@@ -7,6 +7,7 @@ from dataclasses import fields
 import pytest
 
 from superstep import Run, RunMetrics, RunStatus, RunWaiting
+from superstep import _dataset_models as dataset_models
 from superstep._errors import BY_CODE
 
 SPEC = pathlib.Path(__file__).resolve().parents[3] / "docs/api/openapi.public.json"
@@ -36,3 +37,39 @@ def test_every_documented_error_code_is_mapped():
     codes = {code for item in spec["paths"].values() for op in item.values() for r in op["responses"].values()
              for code in r["content"]["application/json"].get("examples", {})}
     assert codes and codes <= set(BY_CODE)
+
+
+@pytest.mark.parametrize("sdk_type, component", [
+    ("DatasetAggregateArguments", "DatasetAggregateQuery"),
+    ("DatasetAggregateGroup", "DatasetAggregateGroup"),
+    ("DatasetAggregateResult", "DatasetAggregateResult"),
+    ("DatasetColumn", "DatasetConnectedColumn"),
+    ("DatasetColumnRules", "DatasetColumnRules"),
+    ("DatasetDeleteResult", "DatasetDeleteResult"),
+    ("DatasetFilter", "DatasetQueryFilter"),
+    ("DatasetFilterGroup", "DatasetFilterGroup"),
+    ("DatasetFilterRule", "DatasetFilterRule"),
+    ("DatasetFindArguments", "DatasetFindArguments"),
+    ("DatasetFindResult", "DatasetFindResult"),
+    ("DatasetFormula", "DatasetFormula"),
+    ("DatasetRow", "DatasetConnectedRow"),
+    ("DatasetRowIdentity", "DatasetRowIdentity"),
+    ("DatasetRowTarget", "DatasetRowTarget"),
+    ("DatasetSort", "DatasetSort"),
+    ("DatasetUniqueTarget", "DatasetUniqueTarget"),
+    ("DatasetWriteResult", "DatasetWriteResult"),
+])
+def test_dataset_types_match_spec_fields(sdk_type, component):
+    model = getattr(dataset_models, sdk_type)
+    schema = schemas()[component]
+    assert model.__required_keys__ == set(schema.get("required", []))
+    assert set(model.__annotations__) == set(schema["properties"])
+
+
+def test_dataset_literals_match_spec():
+    spec = schemas()
+    assert set(typing.get_args(dataset_models.DatasetKind)) == set(spec["DatasetConnectedColumn"]["properties"]["kind"]["enum"])
+    assert set(typing.get_args(dataset_models.DatasetFilterOperator)) == set(spec["DatasetQueryFilter"]["properties"]["op"]["enum"])
+    summaries = spec["DatasetAggregateQuery"]["properties"]["summaries"]
+    functions, = summaries["patternProperties"].values()
+    assert set(typing.get_args(dataset_models.DatasetSummary)) == set(functions["enum"])
