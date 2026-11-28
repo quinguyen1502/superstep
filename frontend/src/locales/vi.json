@@ -149,6 +149,24 @@
       "pagination": "Các trang dòng công khai",
       "page": "Trang {{number}}"
     },
+    "relation": {
+      "target": "Tập dữ liệu đích",
+      "chooseTarget": "Chọn tập dữ liệu",
+      "noTargets": "Phạm vi này không có tập dữ liệu nào khác",
+      "displayColumn": "Cột hiển thị",
+      "chooseDisplay": "Chọn cột hiển thị",
+      "noDisplayColumns": "Không có cột văn bản phù hợp",
+      "definitionHelp": "Cột hiển thị cung cấp nhãn trong bảng. Hãy gỡ liên kết trước khi xoá bản ghi được tham chiếu.",
+      "chooseRow": "Chọn bản ghi liên kết",
+      "search": "Tìm bản ghi liên kết",
+      "noRows": "Không có bản ghi phù hợp",
+      "current": "Liên kết hiện tại",
+      "previousPage": "Trang trước",
+      "nextPage": "Trang sau",
+      "unavailable": "Liên kết không khả dụng",
+      "unlink": "Gỡ liên kết",
+      "unlinkHelp": "Thao tác này gỡ liên kết khỏi ô hiện tại. Bản ghi liên kết vẫn nằm trong tập dữ liệu của nó."
+    },
     "formula": {
       "type": "Công thức",
       "resultType": "Kiểu kết quả",

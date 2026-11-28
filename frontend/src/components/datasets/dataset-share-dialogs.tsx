@@ -34,7 +34,8 @@ export function CreateDatasetShare({ dataset, path, saving, error, onClearError,
   const [ready, setReady] = useState(false)
   const focusPreview = useCallback((heading: HTMLHeadingElement | null) => { heading?.focus() }, [])
   const previewMatches = preview?.schema_revision === dataset.revision
-  const valid = !!name.trim() && !!fields.length && validDatasetFilters(filter, dataset.columns)
+  const columns = dataset.columns.filter(column => column.kind !== 'relation')
+  const valid = !!name.trim() && !!fields.length && validDatasetFilters(filter, columns)
 
   const load = useCallback((search: string, offset: number, signal: AbortSignal) =>
     api<DatasetSharePreview>(`${path}/preview`, {
@@ -71,7 +72,7 @@ export function CreateDatasetShare({ dataset, path, saving, error, onClearError,
         <fieldset className="grid min-w-0 gap-2" disabled={saving}>
           <legend className="mb-1.5 font-medium">{t('dataset.share.columns')}</legend>
           <div className="grid min-w-0 gap-1 sm:grid-cols-2">
-            {dataset.columns.map(column => {
+            {columns.map(column => {
               const checked = fields.includes(column.key)
               return <Label key={column.key} className="min-w-0 rounded-md border p-2">
                 <Checkbox checked={checked} onCheckedChange={value => {
@@ -86,7 +87,7 @@ export function CreateDatasetShare({ dataset, path, saving, error, onClearError,
         </fieldset>
         <fieldset className="grid min-w-0 gap-2" disabled={saving}>
           <legend className="mb-1.5 font-medium">{t('dataset.share.filter')}</legend>
-          <DatasetFilterBuilder tree={filter} columns={dataset.columns} disabled={saving} onChange={value => {
+          <DatasetFilterBuilder tree={filter} columns={columns} disabled={saving} onChange={value => {
             setFilter(value)
             setPreview(undefined)
           }} />

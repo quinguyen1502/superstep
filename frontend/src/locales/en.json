@@ -149,6 +149,24 @@
       "pagination": "Published row pages",
       "page": "Page {{number}}"
     },
+    "relation": {
+      "target": "Target dataset",
+      "chooseTarget": "Choose a dataset",
+      "noTargets": "No other datasets in this scope",
+      "displayColumn": "Display column",
+      "chooseDisplay": "Choose a display column",
+      "noDisplayColumns": "No eligible text columns",
+      "definitionHelp": "The display column supplies labels in Rows. Clear links before deleting a referenced record.",
+      "chooseRow": "Choose a linked record",
+      "search": "Search linked records",
+      "noRows": "No matching records",
+      "current": "Current link",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "unavailable": "Link unavailable",
+      "unlink": "Unlink record",
+      "unlinkHelp": "This clears the link from the current cell. The linked record stays in its dataset."
+    },
     "formula": {
       "type": "Formula",
       "resultType": "Result type",

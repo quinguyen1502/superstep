@@ -8,14 +8,15 @@ import { Empty, EmptyDescription } from '@/components/ui/empty'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { DATASET_QUERY_LIMIT, datasetFilterRules, emptyDatasetFilters, keepDatasetFilterFields, type DatasetColumn, type DatasetFilters } from '@/lib/datasets'
+import { DATASET_QUERY_LIMIT, datasetFilterRules, emptyDatasetFilters, keepDatasetFilterFields, type Dataset, type DatasetFilters } from '@/lib/datasets'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetFilterBuilder, validDatasetFilters } from './dataset-filter-builder'
+import { DatasetRelationFilterValue } from './dataset-relation-picker'
 
 type SortDraft = SortingState[number] & { key: number }
 
-export function DatasetQueryControls({ columns, disabled, filters, sorting, onFilters, onSorting }: {
-  columns: DatasetColumn[]
+export function DatasetQueryControls({ dataset, disabled, filters, sorting, onFilters, onSorting }: {
+  dataset: Dataset
   disabled: boolean
   filters: DatasetFilters
   sorting: SortingState
@@ -23,6 +24,7 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
   onSorting: (sorting: SortingState) => void
 }) {
   const { t } = useTranslation()
+  const { columns } = dataset
   const nextKey = useRef(0)
   const [panel, setPanel] = useState<'filter' | 'sort' | null>(null)
   const [filterDraft, setFilterDraft] = useState(emptyDatasetFilters)
@@ -85,7 +87,11 @@ export function DatasetQueryControls({ columns, disabled, filters, sorting, onFi
           if (validDatasetFilters(filterDraft, columns)) applyFilters(filterDraft)
         }}>
           <div className="grid max-h-[45dvh] gap-2 overflow-y-auto p-1">
-            <DatasetFilterBuilder tree={filterDraft} columns={columns} onChange={setFilterDraft} />
+            <DatasetFilterBuilder tree={filterDraft} columns={columns} onChange={setFilterDraft}
+              renderLiteral={({ column, id, label, value, disabled, onChange }) => column.kind === 'relation'
+                ? <DatasetRelationFilterValue dataset={dataset} field={column.key} id={id} label={label}
+                    value={typeof value === 'string' ? value : null} disabled={disabled} onChange={onChange} />
+                : undefined} />
           </div>
           <p className="text-xs text-muted-foreground">{t('dataset.filterHelp')}</p>
           <Separator />
