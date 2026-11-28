@@ -31,6 +31,9 @@ function ruleError(rule: DatasetFilterRule, column?: DatasetColumn): string | un
   if (!Array.isArray(values) || !values.length || values.some(value => value === null || value === '')) {
     return 'dataset.filterEnterValue'
   }
+  if (column.kind === 'relation' && values.some(value => typeof value !== 'string' || !/^[a-f0-9]{32}$/.test(value))) {
+    return 'dataset.filterEnterValue'
+  }
 }
 
 export function validDatasetFilters(tree: DatasetFilters, columns: DatasetColumn[], depth = 1): boolean {
@@ -48,12 +51,13 @@ function LiteralFilterValue({ id, label, column, op, value, disabled, onChange }
     nullable={false} filter disabled={disabled} onChange={next => { if (!Array.isArray(next)) onChange(next) }} />
 }
 
-export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false, renderValue }: {
+export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false, renderValue, renderLiteral }: {
   tree: DatasetFilters
   columns: DatasetColumn[]
   onChange: (tree: DatasetFilters) => void
   disabled?: boolean
   renderValue?: (props: ValueProps) => ReactNode
+  renderLiteral?: (props: ValueProps) => ReactNode
 }) {
   const { t } = useTranslation()
   const id = useId()
@@ -107,7 +111,7 @@ export function DatasetFilterBuilder({ tree, columns, onChange, disabled = false
             }
             return <div className="flex min-w-0 items-start gap-1" key={valueIndex}>
               <div className="min-w-0 flex-1" key={`${column.key}-${child.op}`}>
-                {renderValue ? renderValue(props) : <LiteralFilterValue {...props} />}
+                {renderValue ? renderValue(props) : renderLiteral?.(props) ?? <LiteralFilterValue {...props} />}
               </div>
               {list && <Button type="button" variant="ghost" size="icon" disabled={disabled || values.length === 1}
                 aria-label={t('dataset.removeFilterValue', { number: valueIndex + 1 })}

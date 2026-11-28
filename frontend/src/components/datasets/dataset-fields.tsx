@@ -203,12 +203,14 @@ export function DatasetValueField({ id, label, column, value, onChange, nullable
   </div>
 }
 
-export function DatasetColumnFields({ column, onChange, existing, formulaEnabled, formulaEditor }: {
+export function DatasetColumnFields({ column, onChange, existing, formulaEnabled, formulaEditor, relationEnabled, relationEditor }: {
   column: ColumnDraft
   onChange: (column: ColumnDraft) => void
   existing?: boolean
   formulaEnabled?: boolean
   formulaEditor?: ReactNode
+  relationEnabled?: boolean
+  relationEditor?: ReactNode
 }) {
   const { t } = useTranslation()
   const id = useId()
@@ -226,22 +228,23 @@ export function DatasetColumnFields({ column, onChange, existing, formulaEnabled
       <Select value={column.formula ? 'formula' : column.kind} disabled={existing} onValueChange={kind => {
         if (kind === 'formula') {
           onChange({ ...column, kind: 'number', required: false, unique: false, default: null, optionsText: '',
-            validation_rules: undefined, display_format: undefined, formula: { version: 1, expression: '' } })
+            validation_rules: undefined, display_format: undefined, relation: undefined, formula: { version: 1, expression: '' } })
           return
         }
         const scalar = kind as DatasetKind
-        onChange({ ...column, kind: scalar, default: null, optionsText: '', validation_rules: undefined, display_format: undefined, formula: undefined,
+        onChange({ ...column, kind: scalar, default: null, optionsText: '', validation_rules: undefined, display_format: undefined, formula: undefined, relation: undefined,
           required: datasetReadOnly(scalar) ? false : column.required,
           unique: scalar === 'auto_number' || (!['long_text', 'multi_select'].includes(scalar) && !datasetReadOnly(scalar) && column.unique) })
       }}>
         <SelectTrigger id={`${id}-kind`} className="w-full"><SelectValue /></SelectTrigger>
         <SelectContent>
           {datasetKinds.map(kind => <SelectItem value={kind} key={kind}><DatasetFieldIcon kind={kind} /><span>{t(`dataset.kind.${kind}`)}</span></SelectItem>)}
-          {column.kind === 'relation' && <SelectItem value="relation"><DatasetFieldIcon kind="relation" />{t('dataset.kind.relation')}</SelectItem>}
+          {(relationEnabled || column.kind === 'relation') && <SelectItem value="relation"><DatasetFieldIcon kind="relation" />{t('dataset.kind.relation')}</SelectItem>}
           {(formulaEnabled || !!column.formula) && <SelectItem value="formula"><DatasetFieldIcon kind="formula" />{t('dataset.formula.type')}</SelectItem>}
         </SelectContent>
       </Select>
     </div>
+    {column.kind === 'relation' && relationEditor}
     {column.formula && <div className="space-y-1">
       <Label htmlFor={id + '-formula-result'}>{t('dataset.formula.resultType')}</Label>
       <Select value={column.kind} disabled={existing} onValueChange={kind => onChange({ ...column, kind: kind as DatasetKind, display_format: undefined })}>

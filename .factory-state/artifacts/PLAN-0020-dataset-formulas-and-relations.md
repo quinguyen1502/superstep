@@ -7,7 +7,7 @@
 - Status: Accepted for implementation on 2026-11-21
 - Owner: Thái Quí Nguyễn
 - Created: 2026-11-21
-- Updated: 2026-11-28
+- Updated: 2026-11-29
 - Related Requirements: REQ-0102
 - Related Design: DES-0007
 - Related Architecture: ARCH-0003
@@ -35,7 +35,10 @@ The work items below sequence the approved scope. The first task delivers the co
 | [Formula Studio and queries](../tasks/done/TASK-0366-dataset-formula-studio.md) | Formula storage | Add a Schema editor with field insertion and preview. Show read-only results and accessible row errors in Rows. Validate server-side filter, sort, summary and CSV behavior with typed and null results. |
 | [Formula runtime and export parity](../tasks/done/TASK-0374-dataset-formula-runtime-export.md) | Formula storage and query contract | Cover read projection in Dataset nodes and Agent tools, connected schema checks, and Formula evaluation in Python and TypeScript standalone. Run shared fixtures against SQLite and PostgreSQL and check write-only behavior. |
 | [Relation storage and authorization](../tasks/done/TASK-0375-dataset-relation-storage.md) | Contract, with shared storage migrations landed in sequence | Add target configuration, indexed reference integrity, scoped search and consistent link writes. Prove concurrent delete/link outcomes, scope changes, source deletion, revocation and unopened private targets against both engines. |
-| Relation Studio, connected API and exports | Relation storage | Add keyboard-friendly target picker, relation display, filters, clear and blocked-deletion guidance. Wire authorized runtime paths and both standalone adapters. Verify relation import/export mapping, permission errors, and setup behavior for missing or incompatible dependencies. Split Studio and two export PRs once the contract is fixed. |
+| [Relation Studio](../tasks/done/TASK-0376-dataset-relation-studio.md) | Relation storage | Add same-scope Schema configuration, a keyboard-operable target picker, authorized labels, identity filters, unlink confirmation and blocked-deletion guidance. |
+| Relation Connected API and runtime | Relation storage and Studio | Wire authorized Relation operations through runtime and Connected bindings. Require separate target access and validate the shared instance and binding dependencies. Verify explicit, authorized CSV link mapping. |
+| Relation Python standalone export | Relation Connected contract | Resolve target bindings, verify same-database setup and snapshot consent, and test authorized link writes and identity mapping. |
+| Relation TypeScript standalone export | Relation Connected contract | Match Python standalone behavior and run the common Relation fixtures. |
 | Cross-surface acceptance and docs | All milestone work | Exercise tickets and companies through Studio, workflow and connected and standalone exports. Update EN/VI handbook, API and export docs. Capture SQLite/PostgreSQL QA, desktop/mobile evidence and performance results. |
 
 ## Sequence

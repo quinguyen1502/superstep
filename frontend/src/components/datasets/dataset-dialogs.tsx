@@ -15,6 +15,8 @@ import { cn } from '@/lib/utils'
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetFormulaEditor } from './dataset-formula-editor'
 import { DatasetColumnFields, DatasetValueField } from './dataset-fields'
+import { DatasetRelationDefinition } from './dataset-relation-definition'
+import { useDatasetRelationLabels, type useDatasetRelationTargets } from './use-dataset-relations'
 
 const message = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback
 
@@ -129,9 +131,10 @@ function columnFailure(failure: unknown, fallback: string): ColumnFailure {
   return result
 }
 
-export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDuplicates }: {
+export function DatasetColumnDialog({ dataset, column, relationTargets, onClose, onSave, onShowDuplicates }: {
   dataset: Dataset
   column?: DatasetColumn
+  relationTargets: ReturnType<typeof useDatasetRelationTargets>
   onClose: () => void
   onSave: (dataset: Dataset) => void
   onShowDuplicates?: (filter: DatasetDuplicateFilter) => void
@@ -141,9 +144,11 @@ export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDu
   const [draft, setDraft] = useState(() => toDraft(column ?? newDatasetColumn()))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<ColumnFailure | null>(null)
+  const incompleteRelation = draft.kind === 'relation' && !(draft.relation?.target_dataset_id && draft.relation.display_key)
 
   async function save(event: FormEvent) {
     event.preventDefault()
+    if (busy || incompleteRelation) return
     setBusy(true)
     setError(null)
     try {
@@ -162,11 +167,14 @@ export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDu
     if (error?.formula) setError(null)
   }
   return <Dialog open onOpenChange={open => { if (!open && !busy) onClose() }}>
-    <DialogContent className={cn("flex max-h-[90dvh] flex-col overflow-hidden", draft.formula && "sm:max-w-lg")}>
+    <DialogContent className={cn("flex max-h-[90dvh] flex-col overflow-hidden", draft.formula && "sm:max-w-lg", draft.kind === "relation" && "sm:max-w-md")}>
       <DialogHeader><DialogTitle>{t(column ? 'dataset.editColumn' : 'dataset.addColumn')}</DialogTitle></DialogHeader>
       <DialogBody><form id={formId} className="space-y-4" onSubmit={save}>
         <DatasetColumnFields column={draft} existing={!!column} onChange={changeDraft}
           formulaEnabled={dataset.formula_config_enabled}
+          relationEnabled={dataset.relation_config_enabled}
+          relationEditor={<DatasetRelationDefinition column={draft} existing={!!column} enabled={!!dataset.relation_config_enabled}
+            targets={relationTargets} onChange={changeDraft} />}
           formulaEditor={<DatasetFormulaEditor dataset={dataset} column={draft} onChange={changeDraft} saveError={error?.formula} />} />
         {duplicates ? <Alert variant="destructive" data-testid="dataset-unique-duplicates"><AlertTriangle />
           <AlertTitle>{t('dataset.uniqueDuplicatesTitle')}</AlertTitle>
@@ -191,7 +199,7 @@ export function DatasetColumnDialog({ dataset, column, onClose, onSave, onShowDu
         </AlertDescription></Alert>}
       </form></DialogBody>
       <DialogFooter><Button type="button" variant="outline" disabled={busy} onClick={onClose}>{t('common.cancel')}</Button>
-        <Button type="submit" form={formId} disabled={busy}>{t('common.save')}</Button>
+        <Button type="submit" form={formId} disabled={busy || incompleteRelation}>{t('common.save')}</Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
@@ -214,6 +222,7 @@ export function DatasetRowDialog({ dataset, row, editable, triggerId, onClose, o
   const [failure, setFailure] = useState<{ message: string; stale: boolean } | null>(null)
   const changes = Object.fromEntries(Object.entries(draft).filter(([key, value]) => !Object.is(source.values[key] ?? null, value)))
   const changed = Object.keys(changes).length > 0
+  const relationLabels = useDatasetRelationLabels(schema, schema.columns, [source], String(source.revision))
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -269,11 +278,15 @@ export function DatasetRowDialog({ dataset, row, editable, triggerId, onClose, o
         <form key={`${schema.revision}-${source.revision}`} id={id} className="grid gap-4 sm:grid-cols-2" onSubmit={save}>
           {schema.columns.map((column, index) => {
             const fieldId = `${id}-${column.key}`
+            const savedValue = source.values[column.key]
+            const relationLabel = typeof savedValue === 'string' ? relationLabels[column.key]?.[savedValue] : undefined
             return <div key={column.key} className="min-w-0 space-y-1">
               <Label htmlFor={fieldId} className="gap-1"><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />{column.label}</Label>
-              <DatasetValueField id={fieldId} label={column.label} column={column} disabled={busy || !editable} focus={editable && index === 0}
+              {column.kind === 'relation' ? <output id={fieldId} className="text-sm wrap-anywhere">
+                {savedValue == null ? '—' : relationLabel ?? t(relationLabel === null ? 'dataset.relation.unavailable' : 'common.loading')}
+              </output> : <DatasetValueField id={fieldId} label={column.label} column={column} disabled={busy || !editable} focus={editable && index === 0}
                 value={Object.hasOwn(draft, column.key) ? draft[column.key] : source.values[column.key] ?? null}
-                onChange={value => setDraft(current => ({ ...current, [column.key]: value }))} />
+                onChange={value => setDraft(current => ({ ...current, [column.key]: value }))} />}
             </div>
           })}
           {failure && <Alert variant="destructive" className="sm:col-span-2"><AlertDescription>{failure.message}</AlertDescription></Alert>}

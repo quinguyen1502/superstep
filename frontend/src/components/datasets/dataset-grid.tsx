@@ -34,6 +34,8 @@ import { DatasetColumnControls, DatasetUniqueBadge } from './dataset-column-cont
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
 import { DatasetQueryControls } from './dataset-query-controls'
+import { DatasetRelationPicker } from './dataset-relation-picker'
+import { useDatasetRelationLabels } from './use-dataset-relations'
 import { isDatasetAccessError, useDatasetLive } from './use-dataset-live'
 
 const NO_ROWS: DatasetRow[] = []
@@ -41,7 +43,7 @@ const features = tableFeatures({
   cellSelectionFeature, columnGroupingFeature, columnOrderingFeature, columnPinningFeature, columnSizingFeature, columnResizingFeature,
   columnVisibilityFeature, rowExpandingFeature, rowPaginationFeature, rowSelectionFeature, rowSortingFeature,
 })
-type Edit = { row: DatasetRow; column: DatasetColumn; value: CellValue }
+type Edit = { row: DatasetRow; column: DatasetColumn; value: CellValue; schemaRevision: number }
 type Cell = { row: string; column: string }
 const DIRECTIONS: Record<string, CellSelectionDirection> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
 const MOVEMENT: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
@@ -163,12 +165,18 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
   const draftRow = useRef<HTMLTableRowElement>(null)
   const inlineEditor = useRef<HTMLFormElement>(null)
   const previewAnchor = useRef<HTMLTableCellElement>(null)
+  const relationAnchor = useRef<HTMLTableCellElement>(null)
   const previewContent = useRef<HTMLDivElement>(null)
   const [selectingCells, setSelectingCells] = useState(false)
   const saving = useRef(false)
   const restoreEditorFocus = useRef(false)
   const restoreCellFocus = useRef<string | null>(null)
-  const confirm = useConfirmDelete()
+  const unlinkFocus = useRef<string | null>(null)
+  const confirm = useConfirmDelete(undefined, () => {
+    const target = unlinkFocus.current
+    unlinkFocus.current = null
+    if (target) requestAnimationFrame(() => document.getElementById(target)?.focus())
+  })
   const [autoOffset, setAutoOffset] = useState<number | null>(null)
   const [autoPage, setAutoPage] = useState<DatasetRowPage | null>(null)
   const [page, setPage] = useState<DatasetRowPage | null>(null)
@@ -528,6 +536,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
     },
   })
   const virtualRows = virtualizer.getVirtualItems()
+  const relationRows = useVirtualRows ? virtualRows.flatMap(item => rows[item.index] ? [rows[item.index].original] : [])
+    : displayPage?.items ?? NO_ROWS
+  const relationLabels = useDatasetRelationLabels(dataset, layout.fields, relationRows, `${snapshotKey}:${refresh}`)
   useEffect(() => {
     if (autoOffset === null || groupColumn || !rowsQuery) return
     const controller = new AbortController()
@@ -620,12 +631,17 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
     if (restoreFocus && edit) window.requestAnimationFrame(() => document.getElementById(cellId(edit.row.id, edit.column.key))?.focus())
   }
 
+  function canEditCell(column: DatasetColumn, value: CellValue) {
+    return editable && (column.kind === 'relation' ? !!dataset.relation_config_enabled || value !== null : !datasetReadOnly(column))
+  }
+
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
-    if (!editable || editing || saving.current || datasetReadOnly(column)) return
+    const value = row.values[column.key] ?? null
+    if (editing || saving.current || !canEditCell(column, value)) return
     setActive({ row: row.id, column: column.key })
     setSaveError(null)
     setStale(false)
-    setEdit({ row, column, value: row.values[column.key] ?? null })
+    setEdit({ row, column, value, schemaRevision: dataset.revision })
   }
 
   async function applyBatch(updates: DatasetBatchRow[], previous = false, append: Record<string, CellValue>[] = []) {
@@ -846,6 +862,50 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
     }
   }
 
+  async function writeRelation(source: Edit, target: string | null) {
+    const path = `${url}/${source.row.id}/relations/${encodeURIComponent(source.column.key)}`
+    const revisions = { revision: source.row.revision, schema_revision: source.schemaRevision }
+    const result = target === null
+      ? await api<{ id: string; revision: number }>(`${path}?revision=${revisions.revision}&schema_revision=${revisions.schema_revision}`, { method: 'DELETE' })
+      : await api<{ id: string; revision: number }>(path, { method: 'PUT', json: { ...revisions, target_row_id: target } })
+    const update = (current: DatasetRowPage | null) => current && { ...current, items: current.items.map(row =>
+      row.id === result.id ? { ...row, revision: result.revision, values: { ...row.values, [source.column.key]: target } } : row) }
+    setPage(update)
+    setAutoPage(update)
+    setNotice(t('dataset.cellSaved'))
+    reload()
+  }
+
+  async function pickRelation(target: string) {
+    if (!edit || busy || stale || saving.current || !editable || !dataset.relation_config_enabled) return
+    if (edit.value === target) { closeEditor(); return }
+    saving.current = true
+    setBusy(true)
+    setSaveError(null)
+    try {
+      await writeRelation(edit, target)
+      closeEditor()
+    } catch (error) {
+      setSaveError({ message: error instanceof Error ? error.message : t('errors.INTERNAL_ERROR') })
+      setStale(error instanceof ApiError && ['DATASET_ROW_CONFLICT', 'DATASET_SCHEMA_CONFLICT'].includes(error.code ?? ''))
+    } finally {
+      saving.current = false
+      setBusy(false)
+    }
+  }
+
+  function askUnlink() {
+    if (!edit || !editable || busy || typeof edit.value !== 'string') return
+    const source = edit
+    const label = relationLabels[edit.column.key]?.[edit.value]
+    unlinkFocus.current = cellId(edit.row.id, edit.column.key)
+    closeEditor(false)
+    confirm.ask({ name: label ?? source.column.label, title: t('dataset.relation.unlink'),
+      description: t('dataset.relation.unlinkHelp'), confirmLabel: t('dataset.relation.unlink'),
+      onConfirm: () => writeRelation(source, null),
+    })
+  }
+
   async function refreshEdit() {
     if (!edit || busy) return
     setBusy(true)
@@ -937,20 +997,24 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
         const isFocused = !editing && isSelected
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
-        const cellEditable = editable && !datasetReadOnly(column)
+        const relation = column.kind === 'relation'
+        const cellEditable = canEditCell(column, value)
         const usesPicker = column.kind === 'boolean' || column.kind === 'select'
         const multiSelect = column.kind === 'multi_select'
-        const display = displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse'))
+        const linkedLabel = relation && typeof value === 'string' ? relationLabels[column.key]?.[value] : undefined
+        const display = relation && value !== null
+          ? linkedLabel ?? t(linkedLabel === null ? 'dataset.relation.unavailable' : 'common.loading')
+          : displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse'))
         const reason = row.original.formula_errors?.[column.key]
         const diagnostic = reason ? datasetFormulaError(reason) : undefined
         const showPreview = isFocused && showCellPreview && value !== null && !!display
-        return <TableCell key={cell.id} ref={isFocused ? previewAnchor : undefined} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
+        return <TableCell key={cell.id} ref={relation && isEditing ? relationAnchor : isFocused ? previewAnchor : undefined} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : !rangeSelected && 'hover:bg-muted',
           rangeSelected && CELL_RANGE_BACKGROUND,
           cell.column.getIsPinned() && '!sticky z-10',
           cell.column.getIsPinned() && !isEditing && !isFocused && !rangeSelected && 'bg-background',
         )}>
-          {isEditing ? <form ref={inlineEditor} onFocus={event => {
+          {isEditing && !relation ? <form ref={inlineEditor} onFocus={event => {
             if (!isSelected && event.currentTarget.contains(event.target)) setActive({ row: row.id, column: column.key })
           }} onSubmit={event => {
             event.preventDefault()
@@ -1009,7 +1073,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
           </form> :
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
               className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0',
-                column.kind === 'url' && value && 'pr-9')}
+                column.kind === 'url' && value && 'pr-9', relation && cellEditable && isFocused && 'pe-9')}
               aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: diagnostic ?? display })}
               title={diagnostic}
               aria-pressed={isFocused || rangeSelected}
@@ -1021,7 +1085,9 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
               }}
               onMouseEnter={event => { if (!editing) cell.getSelectionExtendHandler()(event) }}
               onFocus={() => { if (!draft && (!saveError || saveError.notice)) setActive({ row: row.id, column: column.key }) }}
-              onBlur={event => { if (!inDatasetCell(event.relatedTarget) && !inCellPreview(event.relatedTarget)) setActive(null) }}
+              onBlur={event => {
+                if (!inDatasetCell(event.relatedTarget) && !inCellPreview(event.relatedTarget) && !inEditorPopup(event.relatedTarget)) setActive(null)
+              }}
               onClick={() => { if (!draft) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
@@ -1030,6 +1096,33 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
               {isFocused && cellEditable && (usesPicker || multiSelect) && <ChevronDown aria-hidden="true" className="ms-auto text-muted-foreground" />}
             </Button>
           }
+          {relation && isFocused && cellEditable && <Button type="button" variant="ghost" size="icon-sm" tabIndex={-1}
+            className="absolute inset-y-0 end-0 my-auto" aria-haspopup="dialog" aria-label={t('dataset.relation.chooseRow')}
+            onClick={() => beginEdit(row.original, column)}><ChevronDown /></Button>}
+          {relation && isEditing && <Popover open onOpenChange={open => { if (!open && !saving.current) closeEditor(false) }}>
+            <PopoverAnchor virtualRef={relationAnchor} />
+            <PopoverContent data-dataset-editor-popup="" align="start" aria-label={t('dataset.relation.chooseRow')}
+              className="max-h-(--radix-popover-content-available-height) max-w-[calc(100vw-1.5rem)] overflow-hidden"
+              onCloseAutoFocus={event => event.preventDefault()}
+              onEscapeKeyDown={event => {
+                event.preventDefault()
+                if (!saving.current) closeEditor()
+              }}
+              onInteractOutside={event => { if (saving.current) event.preventDefault() }}>
+              {saveError && <Alert variant="destructive"><AlertDescription>{saveError.message}</AlertDescription></Alert>}
+              {stale ? <Button type="button" variant="outline" onClick={() => {
+                closeEditor()
+                reloadDataset()
+                reload()
+              }}>{t('dataset.refreshEdit')}</Button>
+                : dataset.relation_config_enabled ? <DatasetRelationPicker dataset={{ id: dataset.id, revision: edit.schemaRevision }}
+                  field={column.key} value={typeof value === 'string' ? value : null} busy={busy} onPick={choice => { void pickRelation(choice.id) }}>
+                  {value !== null && <Button type="button" variant="ghost" className="text-destructive" size="sm" disabled={busy}
+                    onClick={askUnlink}>{t('dataset.relation.unlink')}</Button>}
+                </DatasetRelationPicker> : <Button type="button" variant="ghost" className="text-destructive" size="sm"
+                  onClick={askUnlink}>{t('dataset.relation.unlink')}</Button>}
+            </PopoverContent>
+          </Popover>}
           {showPreview && <DatasetCellPreview anchor={previewAnchor} content={previewContent} value={display}
             className={rangeSelected ? CELL_RANGE_BACKGROUND : 'bg-muted'} onClose={() => setActive(null)} />}
           {!isEditing && column.kind === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) &&
@@ -1145,7 +1238,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onA
         </Select>
         <Button variant="toolbar" aria-pressed={showSummaries} disabled={editing}
           onClick={() => setShowSummaries(value => !value)}><Sigma />{t('dataset.summary')}</Button>
-        <DatasetQueryControls columns={dataset.columns} disabled={editing} filters={filters} sorting={sorting}
+        <DatasetQueryControls dataset={dataset} disabled={editing} filters={filters} sorting={sorting}
           onFilters={applyFilters} onSorting={changeSorting} />
         <DatasetColumnControls columns={layout.orderedFields} visibleKeys={new Set(layout.fields.map(column => column.key))}
           disabled={editing} onMove={moveColumn} onVisibility={(key, visible) => table.getColumn(key)?.toggleVisibility(visible)} />

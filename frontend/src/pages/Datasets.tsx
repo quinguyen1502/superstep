@@ -17,6 +17,7 @@ import { DatasetAccessPanel } from '@/components/datasets/dataset-access-panel'
 import { DatasetActionsMenu } from '@/components/datasets/dataset-actions-menu'
 import { DatasetFieldIcon } from '@/components/datasets/dataset-field-icon'
 import { DatasetGrid } from '@/components/datasets/dataset-grid'
+import { useDatasetRelationTargets } from '@/components/datasets/use-dataset-relations'
 import { DatasetOwnerDialog } from '@/components/datasets/dataset-owner-dialog'
 import { HandbookLink } from '@/components/handbook-link'
 import { LanguageSwitcher } from '@/components/language-switcher'
@@ -68,6 +69,7 @@ export function DatasetsPage() {
   const [columnDialog, setColumnDialog] = useState<DatasetColumn | 'new' | null>(null)
   const [gridFilter, setGridFilter] = useState<{ id: string; seq: number; filters: DatasetFilters } | null>(null)
   const current = dataset?.id === id ? dataset : null
+  const relationTargets = useDatasetRelationTargets(current, !!current && tab === 'schema' && (!!columnDialog || current.columns.some(column => column.kind === 'relation')))
   const manageable = !!current && canManageDataset(me, current)
   const manageNote = editable && !manageable ? t('dataset.manageOnly') : undefined
   const detailError = detailFailure?.id === id ? detailFailure?.message : undefined
@@ -329,23 +331,32 @@ export function DatasetsPage() {
                     </TableRow></TableHeader>
                     <TableBody>
                       {!current.columns.length && <TableRow><TableCell colSpan={6}>{t('dataset.noColumns')}</TableCell></TableRow>}
-                      {current.columns.map(column => <TableRow key={column.key}>
-                        <TableCell><div className="flex items-center gap-1.5"><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />{column.label}</div></TableCell>
-                        <TableCell className="font-mono">{column.key}</TableCell>
-                        <TableCell>{t(column.formula ? 'dataset.formula.type' : 'dataset.kind.' + column.kind)}</TableCell>
-                        <TableCell><div className="flex flex-wrap gap-1">
-                          {column.required && <Badge variant="outline">{t('dataset.required')}</Badge>}
-                          {column.unique && <Badge variant="outline">{t('dataset.unique')}</Badge>}
-                        </div></TableCell>
-                        <TableCell>{displayValue(column.default, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind)}</TableCell>
-                        <TableCell><div className="flex gap-1">
-                          <Button variant="ghost" size="icon-sm" disabled={!manageable} aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
-                            aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
-                          <Button variant="ghost" size="icon-sm" className="text-destructive" disabled={!manageable}
-                            aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
-                            aria-label={t('dataset.deleteColumn')} onClick={() => askDeleteColumn(current, column)}><Trash2 /></Button>
-                        </div></TableCell>
-                      </TableRow>)}
+                      {current.columns.map(column => {
+                        const target = relationTargets.items.find(item => item.id === column.relation?.target_dataset_id)
+                        return <TableRow key={column.key}>
+                          <TableCell><div className="flex items-center gap-1.5"><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />{column.label}</div></TableCell>
+                          <TableCell className="font-mono">{column.key}</TableCell>
+                          <TableCell>
+                            {t(column.formula ? 'dataset.formula.type' : 'dataset.kind.' + column.kind)}
+                            {column.relation && <div className="text-xs text-muted-foreground">
+                              {target ? <Link className="underline" to={`/datasets/${target.id}`}>{target.name}</Link>
+                                : t(relationTargets.loading ? 'common.loading' : 'dataset.relation.unavailable')}
+                            </div>}
+                          </TableCell>
+                          <TableCell><div className="flex flex-wrap gap-1">
+                            {column.required && <Badge variant="outline">{t('dataset.required')}</Badge>}
+                            {column.unique && <Badge variant="outline">{t('dataset.unique')}</Badge>}
+                          </div></TableCell>
+                          <TableCell>{displayValue(column.default, t('dataset.valueTrue'), t('dataset.valueFalse'), column.kind)}</TableCell>
+                          <TableCell><div className="flex gap-1">
+                            <Button variant="ghost" size="icon-sm" disabled={!manageable} aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
+                              aria-label={t('dataset.editColumnNamed', { name: column.label })} onClick={() => setColumnDialog(column)}><Pencil /></Button>
+                            <Button variant="ghost" size="icon-sm" className="text-destructive" disabled={!manageable}
+                              aria-describedby={datasetNote ? `${current.id}-schema-note` : undefined}
+                              aria-label={t('dataset.deleteColumn')} onClick={() => askDeleteColumn(current, column)}><Trash2 /></Button>
+                          </div></TableCell>
+                        </TableRow>
+                      })}
                     </TableBody>
                   </Table>
                 </div>
@@ -368,7 +379,7 @@ export function DatasetsPage() {
         setCsvNotice({ id: data.id, count })
         saveDataset(data)
       }} />}
-    {current && columnDialog && <DatasetColumnDialog dataset={current} column={columnDialog === 'new' ? undefined : columnDialog}
+    {current && columnDialog && <DatasetColumnDialog dataset={current} relationTargets={relationTargets} column={columnDialog === 'new' ? undefined : columnDialog}
       onClose={() => setColumnDialog(null)} onSave={data => { setDataset(data); setColumnDialog(null) }}
       onShowDuplicates={({ field, value }) => {
         setColumnDialog(null)
