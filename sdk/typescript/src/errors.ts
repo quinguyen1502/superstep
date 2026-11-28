@@ -90,6 +90,7 @@ export const BY_CODE: Record<string, ErrorClass> = {
   DATASET_ROW_NOT_FOUND: NotFoundError,
   DATASET_BINDING_SCHEMA_MISMATCH: SuperstepError,
   DATASET_SCHEMA_CONFLICT: SuperstepError,
+  DATASET_RELATION_REFERENCED: SuperstepError,
   DATASET_RECEIPT_CONFLICT: SuperstepError,
   DATASET_UNIQUE_CONFLICT: SuperstepError,
   DATASET_ROW_LIMIT: SuperstepError,

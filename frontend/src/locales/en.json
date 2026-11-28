@@ -483,6 +483,7 @@
     "kind": {
       "multi_select": "Multiple select",
       "auto_number": "Auto-number",
+      "relation": "Relation",
       "long_text": "Long text",
       "url": "URL",
       "created_time": "Created time",
@@ -972,6 +973,9 @@
     "DATASET_COLUMN_NOT_FOUND": "Dataset column not found",
     "DATASET_COLUMN_READ_ONLY": "Dataset column {{field}} is read-only.",
     "DATASET_FORMULA_DISABLED": "Dataset Formula configuration is disabled.",
+    "DATASET_RELATION_DISABLED": "Dataset Relation configuration is disabled",
+    "DATASET_RELATION_TARGET_INVALID": "The relation target is unavailable",
+    "DATASET_RELATION_REFERENCED": "Remove the referencing relations before deleting this item",
     "DATASET_FORMULA_INVALID": "Invalid formula for dataset column {{field}}.",
     "DATASET_COLUMN_RULE_VIOLATION": "Value violates the validation rules for {{field}}.",
     "DATASET_COLUMN_RULE_EXISTING_ROWS": "{{count}} existing rows violate the rules for {{field}}.",

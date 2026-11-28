@@ -8,7 +8,7 @@ from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
-from .dataset_service import DatasetService, _compile_formulas
+from .dataset_service import DatasetService, _compile_formulas, require_relation_enabled
 
 def _active_columns(dataset: Dataset) -> dict[str, DatasetColumn]:
     return {column.key: column for column in dataset.columns if not column.archived}
@@ -33,10 +33,16 @@ def _write_value(columns, field, value):
     return _normalize(column, value)
 
 
+def _has_relations(columns: dict[str, DatasetColumn]) -> bool:
+    return any(column.kind == "relation" for column in columns.values())
+
+
 def _row_values(row: DatasetRow, columns) -> dict:
+    targets = {edge.field: edge.target_row_id for edge in row.relation_edges} if _has_relations(columns) else {}
     return {
         key: dataset_timestamp(row.created if column.kind == "created_time" else row.updated)
-        if column.kind in SYSTEM_TIME_KINDS else row.values.get(key)
+        if column.kind in SYSTEM_TIME_KINDS
+        else targets.get(key) if column.kind == "relation" else row.values.get(key)
         for key, column in columns.items()
     }
 
@@ -178,19 +184,58 @@ class DatasetRowService:
 
     def get(self, uid: str, dataset_id: str, row_id: str, *, fields: list[str] | None = None, schema_revision: int | None = None) -> dict:
         dataset = self._read_definition(uid, dataset_id, schema_revision)
-        row = self.rows.get(dataset.id, row_id)
+        projection = _projection(_active_columns(dataset), fields)
+        row = self.rows.get(dataset.id, row_id, include_relations=_has_relations(projection))
         if row is None:
             raise AppError("DATASET_ROW_NOT_FOUND")
-        columns = _active_columns(dataset)
-        return _response(row, _projection(columns, fields))
+        return _response(row, projection)
+
+    @staticmethod
+    def _relation_column(dataset: Dataset, key: str) -> DatasetColumn:
+        column = _column(_active_columns(dataset), key)
+        if column.kind != "relation":
+            raise AppError("DATASET_COLUMN_NOT_FOUND")
+        return column
+
+    def relation_choices(self, uid: str, dataset_id: str, key: str, *, schema_revision: int,
+                         search: str | None, row_ids: list[str], limit: int, offset: int) -> dict:
+        source = self._read_definition(uid, dataset_id, schema_revision)
+        relation = self._relation_column(source, key)
+        target = self.datasets.repo.get(uid, relation.relation_target_id)
+        if target is None or not source.same_scope(target):
+            raise AppError("DATASET_RELATION_TARGET_INVALID")
+        display = _active_columns(target).get(relation.relation_display_key)
+        if display is None or display.kind not in TEXT_KINDS:
+            raise AppError("DATASET_RELATION_TARGET_INVALID")
+        if search and INVALID_TEXT.search(search):
+            raise AppError("DATASET_FILTER_INVALID", field="search")
+        rows = self.rows.relation_choices(uid, target, display, search=search, row_ids=row_ids,
+                                         limit=limit + 1, offset=offset)
+        items = [{"id": row_id, "label": label[:256] if label is not None else None} for row_id, label in rows[:limit]]
+        return {"items": items, "next_offset": offset + limit if len(rows) > limit else None}
+
+    def set_relation(self, uid: str, dataset_id: str, row_id: str, key: str, *,
+                     target_row_id: str | None, revision: int, schema_revision: int) -> dict:
+        dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision)
+        column = self._relation_column(dataset, key)
+        if target_row_id is not None:
+            require_relation_enabled()
+        row, changed = self.rows.set_relation(uid, dataset, row_id, column, revision, target_row_id)
+        if changed:
+            self.datasets.notify_changed(dataset.id)
+            self.datasets.audit.record(uid, "dataset.relation_update", "dataset", dataset.id,
+                                       row_id=row.id, field=key, linked=target_row_id is not None)
+        return {"id": row.id, "revision": row.revision, "target_row_id": target_row_id}
 
     def export_rows(self, uid: str, dataset_id: str, limit: int) -> list[dict]:
         """Rows the caller can read, for an explicit project snapshot. `limit` includes one extra probe row."""
         dataset = self._read_definition(uid, dataset_id, None)
+        columns = _active_columns(dataset)
         rows = self.rows.query(
             dataset.id, filters=[], filter_mode="and", search=None, search_columns=[], sorts=[], limit=limit, offset=0,
+            include_relations=_has_relations(columns),
         )
-        return [_response(row, _active_columns(dataset)) for row in rows]
+        return [_response(row, columns) for row in rows]
 
     def summarize(self, uid: str, dataset_id: str, *, filters: list[dict], filter_tree: dict | None,
                   filter_mode: str, search: str | None, summaries: dict[str, str],
@@ -255,7 +300,8 @@ class DatasetRowService:
         rows, total = self.rows.query_page(
             dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
             search_columns=search_columns,
-            sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts], limit=limit + 1, offset=offset, include_total=include_total,
+            sorts=[(_column(columns, spec["field"]), spec["descending"]) for spec in sorts],
+            limit=limit + 1, offset=offset, include_total=include_total, include_relations=_has_relations(projection),
         )
         items = []
         remaining = MAX_PAGE_BYTES
@@ -315,6 +361,7 @@ class DatasetRowService:
         columns = _active_columns(dataset)
         projection = _write_projection(columns, fields, readable)
         incoming = {field: _write_value(columns, field, value) for field, value in values.items()}
+        include_relations = projection is not None and _has_relations(projection)
         match = None
         if key is not None:
             column = _column(columns, key)
@@ -335,7 +382,8 @@ class DatasetRowService:
 
         if dry_run:
             found = self.rows.query(dataset.id, filters=[RowFilter(columns[key], "eq", match[1])], filter_mode="and",
-                                    search=None, search_columns=[], sorts=[], limit=1, offset=0) if match else []
+                                    search=None, search_columns=[], sorts=[], limit=1, offset=0,
+                                    include_relations=include_relations) if match else []
             current = found[0] if found else None
             values, errors = materialize_formulas(dataset.compile_formulas(), build(current.values if current is not None else None))
             if dataset_size(values) > MAX_ROW_BYTES:
@@ -346,13 +394,15 @@ class DatasetRowService:
             else:
                 now = time()
                 preview = DatasetRow(id=current.id if current is not None else None, values=values, formula_errors=errors,
-                                     created=current.created if current is not None else now, updated=now)
+                                     created=current.created if current is not None else now, updated=now,
+                                     relation_edges=current.relation_edges if current is not None and include_relations else [])
                 row = {"id": preview.id, "values": _row_values(preview, projection), **_formula_diagnostics(preview, projection)}
             return {"row": row, "inserted": current is None, "dry_run": True}
 
         row, inserted, replayed, changed = self.rows.save(
             uid, dataset, build, row_id=row_id, revision=revision, match=match, workflow=workflow, connected=connected,
             reveal=projection is not None and (workflow is not None or connected is not None),
+            include_relations=include_relations,
         )
         if not replayed and changed:
             self.datasets.notify_changed(dataset.id)
@@ -382,6 +432,7 @@ class DatasetRowService:
             found = self._granted_row_id(dataset, columns, row_id, match)
             if found is None:
                 raise AppError("DATASET_ROW_NOT_FOUND")
+            self.rows.require_removable(dataset.id, found)
             return {"row_id": found, "deleted": True, "dry_run": True}
         deleted_id, replayed = self.rows.remove(uid, dataset, row_id=row_id, match=match, workflow=workflow, connected=connected)
         if not replayed:

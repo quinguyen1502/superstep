@@ -41,6 +41,12 @@ def _column(data: dict, position: int) -> DatasetColumn:
             or (kind == "auto_number" and (data["required"] or data["default"] is not None))
             or (kind in SYSTEM_TIME_KINDS and (data["required"] or data["unique"] or data["default"] is not None))):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
+    relation = data.get("relation")
+    if (kind == "relation") != (relation is not None) or (relation and (
+        data["required"] or data["unique"] or data["default"] is not None or data["options"]
+        or data.get("formula") or data.get("validation_rules") or data.get("display_format")
+    )):
+        raise AppError("DATASET_DEFINITION_INVALID", field=key)
     options = [_label(option, key) for option in data["options"]]
     if (kind in {"select", "multi_select"}) != bool(options) or len(options) != len(set(options)):
         raise AppError("DATASET_DEFINITION_INVALID", field=key)
@@ -58,12 +64,25 @@ def _column(data: dict, position: int) -> DatasetColumn:
         required=data["required"], unique=data["unique"] or kind == "auto_number", archived=False, options=options,
         validation_rules=rules or None, display_format=display or None, formula=formula,
         default_value=enforce_rules(key, default, rules),
+        relation_target_id=relation["target_dataset_id"] if relation else None,
+        relation_display_key=relation["display_key"] if relation else None,
     )
 
 
 def _require_formula_enabled() -> None:
     if not config.dataset_formulas_enabled():
         raise AppError("DATASET_FORMULA_DISABLED")
+
+
+def require_relation_enabled() -> None:
+    if not config.dataset_relations_enabled():
+        raise AppError("DATASET_RELATION_DISABLED")
+
+
+def _relation_definition(column: DatasetColumn) -> dict | None:
+    if column.kind == "relation":
+        return {"target_dataset_id": column.relation_target_id, "display_key": column.relation_display_key}
+    return None
 
 
 def _compile_formulas(dataset: Dataset) -> dict[str, Formula]:
@@ -101,12 +120,14 @@ def _detail(dataset: Dataset) -> dict:
     return {
         **_summary(dataset),
         **({"formula_config_enabled": True} if config.dataset_formulas_enabled() else {}),
+        **({"relation_config_enabled": True} if config.dataset_relations_enabled() else {}),
         "columns": [
             {"key": col.key, "label": col.label, "kind": col.kind, "required": col.required,
              "unique": col.unique, "default": col.default_value, "options": col.options,
              **({"validation_rules": col.validation_rules} if col.validation_rules else {}),
              **({"display_format": col.display_format} if col.display_format else {}),
-             **({"formula": col.formula} if col.formula is not None else {})}
+             **({"formula": col.formula} if col.formula is not None else {}),
+             **({"relation": _relation_definition(col)} if col.kind == "relation" else {})}
             for col in dataset.columns if not col.archived
         ],
     }
@@ -149,11 +170,7 @@ class DatasetService:
 
     def can_manage(self, uid: str, dataset: Dataset) -> bool:
         """Schema, dataset deletion, grants, and tokens: the personal owner, a team dataset's owner, or an admin."""
-        if not self.access.can(uid, P.RESOURCES_MANAGE):
-            return False
-        if dataset.team_id is None:
-            return dataset.owner_id == uid
-        return dataset.team_owner_id == uid or self.access.can(uid, P.ORG_MANAGE)
+        return dataset.may_manage(uid, self.access.role(uid))
 
     def managed_definition(self, uid: str, dataset_id: str, revision: int | None) -> Dataset:
         dataset = self.editable_definition(uid, dataset_id, None)
@@ -165,10 +182,12 @@ class DatasetService:
 
     def _save(self, uid: str, dataset: Dataset, action: str, *, require_empty: bool = False,
               unique_change: tuple[str, bool] | None = None, rows: RowChange | None = None,
-              validate_field: str | None = None, formulas: dict[str, Formula] | None = None, **details) -> dict:
+              validate_field: str | None = None, formulas: dict[str, Formula] | None = None,
+              relation: DatasetColumn | None = None, **details) -> dict:
         dataset.updated = time()
         saved, changed = self.repo.save(uid, dataset, dataset.revision, require_empty=require_empty,
-                                        unique=unique_change, rows=rows, validate_field=validate_field, formulas=formulas)
+                                        unique=unique_change, rows=rows, validate_field=validate_field,
+                                        formulas=formulas, relation=relation)
         self.notify_changed(dataset.id)
         if rows is not None or formulas is not None:
             details["rows"] = changed
@@ -211,6 +230,8 @@ class DatasetService:
             name=label, name_key=label.casefold(), description=_description(description),
             revision=1, created=now, updated=now, columns=fields,
         )
+        if any(field.kind == "relation" for field in fields):
+            require_relation_enabled()
         if any(field.formula is not None for field in fields):
             _require_formula_enabled()
             _compile_formulas(dataset)
@@ -268,6 +289,9 @@ class DatasetService:
             raise AppError("DATASET_COLUMN_LIMIT", max=MAX_COLUMN_DEFINITIONS)
         field = _column(column, len(dataset.columns))
         dataset.columns.append(field)
+        if field.kind == "relation":
+            require_relation_enabled()
+            return self._save(uid, dataset, "dataset.column_add", relation=field, field=field.key)
         if field.formula is not None:
             _require_formula_enabled()
             return self._save(uid, dataset, "dataset.column_add", formulas=_compile_formulas(dataset), field=field.key)
@@ -285,10 +309,13 @@ class DatasetService:
         field = self._find_column(dataset, key)
         if field.formula is not None and column.get("formula") is None:
             column = {**column, "formula": field.formula}
+        if field.kind == "relation" and column.get("relation") is None:
+            column = {**column, "relation": _relation_definition(field)}
         proposed = _column(column, field.position)
         if (
             proposed.key != field.key or proposed.kind != field.kind or proposed.required != field.required
             or (proposed.formula is None) != (field.formula is None)
+            or proposed.relation_target_id != field.relation_target_id
             or not set(field.options).issubset(proposed.options)
         ):
             raise AppError("DATASET_SCHEMA_INCOMPATIBLE", field=key)
@@ -303,6 +330,11 @@ class DatasetService:
             _require_formula_enabled()
             field.formula = proposed.formula
             formulas = _compile_formulas(dataset)
+        relation = None
+        if proposed.relation_display_key != field.relation_display_key:
+            require_relation_enabled()
+            field.relation_display_key = proposed.relation_display_key
+            relation = field
         field.validation_rules = proposed.validation_rules
         field.display_format = proposed.display_format
         field.label = proposed.label
@@ -311,7 +343,7 @@ class DatasetService:
         field.unique = proposed.unique
         changes = {"unique": proposed.unique} if unique_change else {}
         return self._save(uid, dataset, "dataset.column_update", unique_change=unique_change, validate_field=validate_field,
-                          formulas=formulas, field=key, **changes)
+                          formulas=formulas, relation=relation, field=key, **changes)
 
     def _require_unbound_key(self, uid: str, dataset_id: str, key: str) -> None:
         """A field that a saved workflow uses to match rows (upsert or delete) must stay unique."""

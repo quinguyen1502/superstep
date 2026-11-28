@@ -7,16 +7,18 @@ from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from ..core import permissions as P
 from ..core.dataset_formula import Formula, materialize_formulas
-from ..core.dataset_types import MAX_ROW_BYTES, dataset_size, key_digest
+from ..core.dataset_types import MAX_ROW_BYTES, TEXT_KINDS, dataset_size, key_digest
 from ..core.dataset_rules import violates_rule
 from ..core.errors import AppError
 from ..models.database import Database
-from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
+from ..models.dataset import Dataset, DatasetColumn, DatasetRelationEdge, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
 from ..models.dataset_receipt import DatasetWriteReceipt
 from ..models.dataset_share import DatasetShare
 from ..models.team import TeamMember
+from ..models.user import User
 from ..models.workflow import Workflow
 
 UNIQUE_SAMPLE_ROWS = 5
@@ -35,7 +37,23 @@ class RowChange:
 
 def delete_dataset_definitions(session: Session, condition) -> None:
     """Clean up definitions explicitly on SQLite as well as on PostgreSQL."""
-    ids = select(Dataset.id).where(condition)
+    if session.get_bind().dialect.name == "postgresql":
+        lock = select(Dataset.id).where(condition).order_by(Dataset.id).with_for_update()
+    else:
+        lock = update(Dataset).where(condition).values(revision=Dataset.revision).returning(Dataset.id)
+    ids = list(session.scalars(lock))
+    if not ids:
+        return
+    external_definition = select(DatasetColumn.key).where(
+        DatasetColumn.relation_target_id.in_(ids), DatasetColumn.dataset_id.not_in(ids),
+        DatasetColumn.archived.is_(False),
+    ).exists()
+    external_edge = select(DatasetRelationEdge.field).where(
+        DatasetRelationEdge.target_dataset_id.in_(ids), DatasetRelationEdge.source_dataset_id.not_in(ids),
+    ).exists()
+    if session.scalar(select(external_definition | external_edge)):
+        raise AppError("DATASET_RELATION_REFERENCED")
+    session.execute(delete(DatasetRelationEdge).where(DatasetRelationEdge.source_dataset_id.in_(ids)))
     session.execute(delete(DatasetShare).where(DatasetShare.dataset_id.in_(ids)))
     session.execute(delete(DatasetWriteReceipt).where(DatasetWriteReceipt.dataset_id.in_(ids)))
     session.execute(delete(DatasetApiToken).where(DatasetApiToken.dataset_id.in_(ids)))
@@ -43,7 +61,7 @@ def delete_dataset_definitions(session: Session, condition) -> None:
     session.execute(delete(DatasetRowKey).where(DatasetRowKey.dataset_id.in_(ids)))
     session.execute(delete(DatasetRow).where(DatasetRow.dataset_id.in_(ids)))
     session.execute(delete(DatasetColumn).where(DatasetColumn.dataset_id.in_(ids)))
-    session.execute(delete(Dataset).where(condition))
+    session.execute(delete(Dataset).where(Dataset.id.in_(ids)))
 
 
 class DatasetRepository:
@@ -99,7 +117,10 @@ class DatasetRepository:
             self.raise_integrity_error(exc)
 
     def add(self, dataset: Dataset) -> Dataset:
+        relations = [column for column in dataset.columns if column.kind == "relation"]
         with self.db.session() as session:
+            if relations:
+                self.lock_relations(session, dataset.owner_id or dataset.team_owner_id, dataset, relations, manage=True)
             session.add(dataset)
             self._commit(session)
         return dataset
@@ -114,15 +135,63 @@ class DatasetRepository:
         if result.rowcount != 1:
             raise AppError("DATASET_SCHEMA_CONFLICT")
 
+    def lock_relations(self, session: Session, uid: str, source: Dataset, relations: list[DatasetColumn], *,
+                       revision: int | None = None, advance: bool = False, manage: bool = False) -> None:
+        """Lock all participating Datasets before checking current access, scope and display fields."""
+        targets = {column.relation_target_id for column in relations}
+        if source.id in targets or None in targets:
+            raise AppError("DATASET_RELATION_TARGET_INVALID")
+        for dataset_id in sorted(targets | ({source.id} if revision is not None else set())):
+            if dataset_id == source.id:
+                self.lock(session, uid, source.id, revision, advance=advance)
+            else:
+                locked = session.execute(update(Dataset).where(Dataset.id == dataset_id, self._visible(uid))
+                                         .values(revision=Dataset.revision))
+                if locked.rowcount != 1:
+                    raise AppError("DATASET_RELATION_TARGET_INVALID")
+        role = session.scalar(select(User.role).where(User.id == uid, User.active.is_(True)).with_for_update(read=True))
+        if not P.can(role, P.RESOURCES_MANAGE):
+            raise AppError("PERMISSION_DENIED", permission=P.RESOURCES_MANAGE)
+        if source.team_id is not None and session.scalar(select(TeamMember.user_id).where(
+            TeamMember.team_id == source.team_id, TeamMember.user_id == uid,
+        ).with_for_update(read=True)) is None:
+            raise AppError("DATASET_NOT_FOUND")
+        current = session.get(Dataset, source.id) if revision is not None else source
+        if manage and not current.may_manage(uid, role):
+            raise AppError("DATASET_MANAGE_DENIED")
+        for column in relations:
+            target = session.get(Dataset, column.relation_target_id)
+            display = session.get(DatasetColumn, (column.relation_target_id, column.relation_display_key))
+            if not source.same_scope(target) or display is None or display.archived or display.kind not in TEXT_KINDS:
+                raise AppError("DATASET_RELATION_TARGET_INVALID")
+
+    @staticmethod
+    def _check_display_column(session: Session, dataset_id: str, key: str) -> None:
+        referenced = select(DatasetColumn.key).where(
+            DatasetColumn.relation_target_id == dataset_id, DatasetColumn.relation_display_key == key,
+            DatasetColumn.archived.is_(False),
+        ).limit(1)
+        if session.scalar(referenced) is not None:
+            raise AppError("DATASET_RELATION_REFERENCED")
+
     def save(self, uid: str, dataset: Dataset, revision: int, *, require_empty: bool = False,
              unique: tuple[str, bool] | None = None, rows: RowChange | None = None,
-             validate_field: str | None = None, formulas: dict[str, Formula] | None = None) -> tuple[Dataset, int]:
+             validate_field: str | None = None, formulas: dict[str, Formula] | None = None,
+             relation: DatasetColumn | None = None) -> tuple[Dataset, int]:
         """Save a definition under the writer lock and return it with the number of rows changed.
 
         `rows` clears or fills one field on every row, and `unique` adds or drops one column's row keys,
         both in the same transaction as the definition. A supplied formula plan also backfills\n        results and diagnostics, including clearing a removed computed field."""
         with self.db.session() as session:
-            self.lock(session, uid, dataset.id, revision, advance=True)
+            if relation is None:
+                self.lock(session, uid, dataset.id, revision, advance=True)
+            else:
+                self.lock_relations(session, uid, dataset, [relation], revision=revision, advance=True, manage=True)
+            if rows is not None and rows.clear:
+                self._check_display_column(session, dataset.id, rows.field)
+                session.execute(delete(DatasetRelationEdge).where(
+                    DatasetRelationEdge.source_dataset_id == dataset.id, DatasetRelationEdge.field == rows.field,
+                ))
             if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
                 raise AppError("DATASET_SCHEMA_HAS_ROWS")
             dataset.revision = revision + 1

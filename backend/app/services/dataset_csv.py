@@ -9,7 +9,7 @@ from ..core.dataset_types import INVALID_TEXT, MAX_COLUMNS, MAX_ROW_BYTES, Datas
 from ..core.errors import AppError
 from ..models.dataset import DatasetColumn
 from ..repositories.dataset_rows import DatasetRowRepository
-from .dataset_rows import _row_values, _active_columns, _normalize
+from .dataset_rows import _has_relations, _row_values, _active_columns, _normalize
 from .dataset_service import DatasetService, _detail
 
 MAX_CSV_BYTES = 1_048_576
@@ -149,6 +149,8 @@ class DatasetCsvService:
         self.datasets.access.require(uid, P.RESOURCES_MANAGE)
         if (dataset_id is not None and create is not None) or (commit and dataset_id is None and create is None):
             raise AppError("DATASET_CSV_MAPPING_INVALID")
+        if create and any(column["kind"] == "relation" for column in create["columns"]):
+            raise AppError("DATASET_CSV_MAPPING_INVALID")
         if commit and dataset_id is not None and schema_revision is None:
             raise AppError("DATASET_SCHEMA_CONFLICT")
         dataset = self.datasets.editable_definition(uid, dataset_id, schema_revision) if dataset_id else None
@@ -249,7 +251,7 @@ class DatasetCsvService:
             if len(output) > MAX_EXPORT_BYTES:
                 raise AppError("DATASET_CSV_LIMIT", max=MAX_EXPORT_BYTES)
         append(_csv_value(column.label) for column in columns.values())
-        rows = self.rows.export_rows(uid, dataset.id)
+        rows = self.rows.export_rows(uid, dataset.id, include_relations=_has_relations(columns))
         try:
             for row in rows:
                 values = _row_values(row, columns)

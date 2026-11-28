@@ -8,12 +8,12 @@ from uuid import uuid4
 from sqlalchemy import cast, and_, delete, func, literal, or_, select, text, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from ..core.dataset_formula import materialize_formulas
 from ..core.dataset_types import MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, SYSTEM_TIME_KINDS, TEXT_FOLD_FUNCTION, MAX_ROW_BYTES, CellValue, DatasetValue, dataset_size, dataset_timestamp, key_digest, timestamp_millis, write_fingerprint
 from ..core.errors import AppError
-from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
+from ..models.dataset import Dataset, DatasetColumn, DatasetRelationEdge, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
 from ..models.dataset_receipt import DatasetWriteReceipt
 from ..models.run import Run
@@ -69,6 +69,11 @@ class RowFilterGroup:
 
 
 def _column_value(column: DatasetColumn):
+    if column.kind == "relation":
+        return select(DatasetRelationEdge.target_row_id).where(
+            DatasetRelationEdge.source_dataset_id == DatasetRow.dataset_id,
+            DatasetRelationEdge.source_row_id == DatasetRow.id, DatasetRelationEdge.field == column.key,
+        ).correlate(DatasetRow).scalar_subquery()
     if column.kind in SYSTEM_TIME_KINDS:
         stamp = DatasetRow.created if column.kind == "created_time" else DatasetRow.updated
         return func.floor(stamp * 1000)
@@ -186,15 +191,29 @@ class DatasetRowRepository:
             session.commit()
             return removed.rowcount
 
-    def get(self, dataset_id: str, row_id: str) -> DatasetRow | None:
+    def get(self, dataset_id: str, row_id: str, *, include_relations: bool = False) -> DatasetRow | None:
+        options = (joinedload(DatasetRow.relation_edges),) if include_relations else ()
         with self.datasets.db.session() as session:
-            return session.get(DatasetRow, (dataset_id, row_id))
+            return session.get(DatasetRow, (dataset_id, row_id), options=options)
+
+    def relation_choices(self, uid: str, target: Dataset, display: DatasetColumn, *, search: str | None,
+                         row_ids: list[str], limit: int, offset: int) -> list[tuple[str, str | None]]:
+        query, texts = self._filtered_query(target.id, [], "and", search, [display])
+        visible = select(Dataset.id).where(Dataset.id == target.id, self.datasets._visible(uid))
+        label = _column_value(display)
+        statement = query.with_only_columns(DatasetRow.id, label).where(DatasetRow.dataset_id.in_(visible))
+        if row_ids:
+            statement = statement.where(DatasetRow.id.in_(row_ids))
+        statement = statement.order_by(texts.fold(label).asc().nulls_last(), DatasetRow.id).limit(limit).offset(offset)
+        with self.datasets.db.session() as session:
+            return [(row_id, value) for row_id, value in session.execute(statement)]
 
     def query(self, dataset_id: str, *, filters: list[RowFilter], filter_mode: str, search: str | None,
               search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
-              limit: int, offset: int) -> list[DatasetRow]:
+              limit: int, offset: int, include_relations: bool = False) -> list[DatasetRow]:
         rows, _ = self.query_page(dataset_id, filters=filters, filter_mode=filter_mode, search=search,
-                                  search_columns=search_columns, sorts=sorts, limit=limit, offset=offset)
+                                  search_columns=search_columns, sorts=sorts, limit=limit, offset=offset,
+                                  include_relations=include_relations)
         return rows
 
     def _filtered_query(self, dataset_id, filters, filter_mode, search, search_columns):
@@ -239,7 +258,8 @@ class DatasetRowRepository:
 
     def query_page(self, dataset_id: str, *, filters: list[RowFilter | RowFilterGroup], filter_mode: str, search: str | None,
                    search_columns: list[DatasetColumn], sorts: list[tuple[DatasetColumn, bool]],
-                   limit: int, offset: int, include_total: bool = False) -> tuple[list[DatasetRow], int | None]:
+                   limit: int, offset: int, include_total: bool = False,
+                   include_relations: bool = False) -> tuple[list[DatasetRow], int | None]:
         query, texts = self._filtered_query(dataset_id, filters, filter_mode, search, search_columns)
         order = []
         for sort, descending in sorts:
@@ -248,9 +268,11 @@ class DatasetRowRepository:
             if sort.kind not in {"number", "boolean", "auto_number"} | SYSTEM_TIME_KINDS:
                 keys = [texts.fold(expression), texts.exact(expression)]  # case-insensitive, then exact as the tiebreak
             order.extend((key.desc() if descending else key.asc()).nulls_last() for key in keys)
-        page = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id)
+        page = query.order_by(*(order or [DatasetRow.created]), DatasetRow.id).limit(limit).offset(offset)
+        if include_relations:
+            page = page.options(joinedload(DatasetRow.relation_edges))
         with self.datasets.db.session() as session:
-            rows = list(session.scalars(page.limit(limit).offset(offset)))
+            rows = list(session.scalars(page).unique())
             total = None
             if include_total:
                 matches = query.with_only_columns(DatasetRow.id).limit(MAX_DATASET_ROWS + 1)
@@ -298,10 +320,37 @@ class DatasetRowRepository:
                 raise AppError("DATASET_UNIQUE_CONFLICT") from exc
             raise
 
+    def set_relation(self, uid: str, dataset: Dataset, row_id: str, column: DatasetColumn,
+                     revision: int, target_row_id: str | None) -> tuple[DatasetRow, bool]:
+        target_id = column.relation_target_id
+        with self.datasets.db.session() as session:
+            self.datasets.lock_relations(session, uid, dataset, [column] if target_row_id else [],
+                                         revision=dataset.revision)
+            row = session.get(DatasetRow, (dataset.id, row_id))
+            if row is None:
+                raise AppError("DATASET_ROW_NOT_FOUND")
+            self._check_revision(row, revision)
+            if target_row_id is not None and session.get(DatasetRow, (target_id, target_row_id)) is None:
+                raise AppError("DATASET_RELATION_TARGET_INVALID")
+            edge = session.get(DatasetRelationEdge, (dataset.id, row_id, column.key))
+            if (edge.target_row_id if edge else None) == target_row_id:
+                return row, False
+            if target_row_id is None:
+                session.delete(edge)
+            elif edge is None:
+                session.add(DatasetRelationEdge(source_dataset_id=dataset.id, source_row_id=row_id,
+                                                field=column.key, target_dataset_id=target_id, target_row_id=target_row_id))
+            else:
+                edge.target_row_id = target_row_id
+            row.updated, row.revision = time(), row.revision + 1
+            self._commit(session, dataset.id, changed=True)
+            return row, True
+
     def save(self, uid: str, dataset: Dataset, build_values: Callable[[dict | None], dict], *,
              row_id: str | None = None, revision: int | None = None,
              match: tuple[str, CellValue] | None = None, workflow: WorkflowWrite | None = None,
-             connected: ConnectedWrite | None = None, reveal: bool = False) -> tuple[DatasetRow, bool, bool, bool]:
+             connected: ConnectedWrite | None = None, reveal: bool = False,
+             include_relations: bool = False) -> tuple[DatasetRow, bool, bool, bool]:
         """Insert or update one row under the writer lock.
 
         Returns the row, whether it was inserted, whether a receipt was replayed, and whether stored values
@@ -309,6 +358,7 @@ class DatasetRowRepository:
         token so a concurrent downgrade to write-only fails closed.
         """
         receipt = workflow or connected
+        options = (joinedload(DatasetRow.relation_edges),) if include_relations else ()
         with self.datasets.db.session() as session:
             if workflow and workflow.fence is not None:
                 checked = session.execute(update(Run).where(
@@ -343,7 +393,7 @@ class DatasetRowRepository:
                     if previous.dataset_id != dataset.id or previous.fingerprint != fingerprint:
                         raise AppError("DATASET_RECEIPT_CONFLICT")
                     result = previous.result
-                    row = session.get(DatasetRow, (dataset.id, result["row_id"]))
+                    row = session.get(DatasetRow, (dataset.id, result["row_id"]), options=options)
                     if row is None:
                         row = DatasetRow(dataset_id=dataset.id, id=result["row_id"], revision=result["revision"])
                     return row, result["inserted"], True, False
@@ -351,7 +401,7 @@ class DatasetRowRepository:
                 field, value = match
                 key = session.get(DatasetRowKey, (dataset.id, field, key_digest(value)))
                 row_id = key.row_id if key is not None else None
-            row = session.get(DatasetRow, (dataset.id, row_id)) if row_id is not None else None
+            row = session.get(DatasetRow, (dataset.id, row_id), options=options) if row_id is not None else None
             if row is None and row_id is not None:
                 raise AppError("DATASET_ROW_NOT_FOUND")
             values = build_values(row.values if row is not None else None)
@@ -370,7 +420,7 @@ class DatasetRowRepository:
             changed = inserted or values != row.values or errors != row.formula_errors
             if inserted:
                 row = DatasetRow(dataset_id=dataset.id, id=uuid4().hex, values=values, formula_errors=errors,
-                                 revision=1, created=now, updated=now)
+                                 revision=1, created=now, updated=now, relation_edges=[])
                 session.add(row)
                 session.flush()
             elif changed:
@@ -397,10 +447,13 @@ class DatasetRowRepository:
             statement = select(DatasetRow).where(DatasetRow.dataset_id == dataset.id, DatasetRow.id.in_([*updates, *removals]))
             rows = {row.id: row for row in session.scalars(statement)}
             changed, issues = {}, []
+            protected = self._protected_rows(session, dataset.id, removals) if removals else set()
             for row_id, revision in removals.items():
                 row = rows.get(row_id)
                 if row is None or row.revision != revision:
                     issues.append(issue(row_id, None, "DATASET_ROW_NOT_FOUND" if row is None else "DATASET_ROW_CONFLICT"))
+                elif row_id in protected:
+                    issues.append(issue(row_id, None, "DATASET_RELATION_REFERENCED"))
             computed_records = []
             if records:
                 total = session.scalar(select(func.count()).select_from(DatasetRow).where(DatasetRow.dataset_id == dataset.id))
@@ -477,6 +530,8 @@ class DatasetRowRepository:
                 row.updated, row.revision = now, row.revision + 1
                 session.add_all(self._keys(dataset, row))
                 result.append({"id": row.id, "revision": row.revision, "previous": previous})
+            if removals:
+                self._clear_outgoing_edges(session, dataset.id, removals)
             for row_id in removals:
                 session.delete(rows[row_id])
             added_rows = []
@@ -544,16 +599,43 @@ class DatasetRowRepository:
             session.add_all(key for row in rows for key in self._keys(dataset, row))
             self._commit(session, dataset.id, changed=bool(values) and not create)
 
-    def export_rows(self, uid: str, dataset_id: str) -> Iterator[DatasetRow]:
+    def export_rows(self, uid: str, dataset_id: str, *, include_relations: bool = False) -> Iterator[DatasetRow]:
         statement = select(DatasetRow).join(Dataset, DatasetRow.dataset_id == Dataset.id).where(
             DatasetRow.dataset_id == dataset_id, self.datasets._visible(uid),
         ).order_by(DatasetRow.created, DatasetRow.id).execution_options(yield_per=128)
+        if include_relations:
+            statement = statement.options(selectinload(DatasetRow.relation_edges))
         with self.datasets.db.session() as session:
             yield from session.scalars(statement)
 
     @staticmethod
     def _clear_keys(session: Session, dataset_id: str, row_id: str) -> None:
         session.execute(delete(DatasetRowKey).where(DatasetRowKey.dataset_id == dataset_id, DatasetRowKey.row_id == row_id))
+
+    @staticmethod
+    def _protected_rows(session: Session, dataset_id: str, row_ids) -> set[str]:
+        statement = select(DatasetRelationEdge.target_row_id).where(
+            DatasetRelationEdge.target_dataset_id == dataset_id, DatasetRelationEdge.target_row_id.in_(row_ids),
+        ).distinct()
+        return set(session.scalars(statement))
+
+    @staticmethod
+    def _clear_outgoing_edges(session: Session, dataset_id: str, row_ids) -> None:
+        session.execute(delete(DatasetRelationEdge).where(
+            DatasetRelationEdge.source_dataset_id == dataset_id, DatasetRelationEdge.source_row_id.in_(row_ids),
+        ))
+
+    def require_removable(self, dataset_id: str, row_id: str) -> None:
+        with self.datasets.db.session() as session:
+            if self._protected_rows(session, dataset_id, [row_id]):
+                raise AppError("DATASET_RELATION_REFERENCED")
+
+    def _delete_row(self, session: Session, row: DatasetRow) -> None:
+        if self._protected_rows(session, row.dataset_id, [row.id]):
+            raise AppError("DATASET_RELATION_REFERENCED")
+        self._clear_outgoing_edges(session, row.dataset_id, [row.id])
+        self._clear_keys(session, row.dataset_id, row.id)
+        session.delete(row)
 
     def remove(self, uid: str, dataset: Dataset, *, row_id: str | None, match: tuple[str, CellValue] | None,
                workflow: WorkflowWrite | None = None, connected: ConnectedWrite | None = None) -> tuple[str, bool]:
@@ -595,8 +677,7 @@ class DatasetRowRepository:
             if row is None:
                 raise AppError("DATASET_ROW_NOT_FOUND")
             deleted_id = row.id
-            self._clear_keys(session, dataset.id, deleted_id)
-            session.delete(row)
+            self._delete_row(session, row)
             if receipt:
                 session.add(DatasetWriteReceipt(
                     dataset_id=dataset.id, scope=scope, operation_id=receipt.operation_id, fingerprint=fingerprint,
@@ -612,6 +693,5 @@ class DatasetRowRepository:
             if row is None:
                 raise AppError("DATASET_ROW_NOT_FOUND")
             self._check_revision(row, revision)
-            self._clear_keys(session, dataset.id, row_id)
-            session.delete(row)
+            self._delete_row(session, row)
             self._commit(session, dataset.id, changed=True)

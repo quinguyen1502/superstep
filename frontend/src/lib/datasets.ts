@@ -2,12 +2,12 @@ import i18n, { fmtDate, fmtCalendarDate } from "@/lib/i18n"
 import { can, type Me } from '@/lib/rbac'
 
 export const datasetKinds = ['text', 'number', 'boolean', 'date', 'datetime', 'email', 'select', 'long_text', 'url', 'created_time', 'updated_time', 'multi_select', 'auto_number'] as const
-export type DatasetKind = (typeof datasetKinds)[number]
+export type DatasetKind = (typeof datasetKinds)[number] | 'relation'
 export const datasetSystemTime = (kind: DatasetKind) => kind === 'created_time' || kind === 'updated_time'
 export function datasetReadOnly(field: DatasetKind | Pick<DatasetColumn, 'kind' | 'formula'>): boolean {
   if (typeof field !== 'string' && field.formula) return true
   const kind = typeof field === 'string' ? field : field.kind
-  return datasetSystemTime(kind) || kind === 'auto_number'
+  return datasetSystemTime(kind) || kind === 'auto_number' || kind === 'relation'
 }
 export const datasetFormulaKinds = ['number', 'boolean', 'text'] as const
 export const datasetFormulaInputKinds = [...datasetFormulaKinds, 'auto_number', 'select', 'long_text', 'url', 'email'] as const
@@ -52,6 +52,7 @@ export type DatasetColumn = {
   validation_rules?: DatasetValidationRules
   display_format?: DatasetDisplayFormat
   formula?: { version: 1; expression: string }
+  relation?: { target_dataset_id: string; display_key: string }
 }
 export type DatasetSummary = {
   id: string
@@ -62,7 +63,7 @@ export type DatasetSummary = {
   team_owner_id?: string | null
   revision: number
 }
-export type Dataset = DatasetSummary & { columns: DatasetColumn[]; formula_config_enabled?: boolean }
+export type Dataset = DatasetSummary & { columns: DatasetColumn[]; formula_config_enabled?: boolean; relation_config_enabled?: boolean }
 export type DatasetRow = { id: string; revision: number; values: Record<string, CellValue>; formula_errors?: Record<string, string> }
 export type DatasetPage<T> = { items: T[]; next_offset: number | null }
 export type DatasetRowPage = DatasetPage<DatasetRow> & { schema_revision: number; total: number; total_capped: boolean }
@@ -180,6 +181,7 @@ export type DatasetAgentOperation = (typeof datasetAgentOperations)[number]
 
 export function datasetFilterOperators(kind: DatasetColumn['kind']) {
   if (kind === 'multi_select') return ['contains_any', 'contains_all', 'is_null']
+  if (kind === 'relation') return ['eq', 'ne', 'is_null', 'not_null']
   if (kind === 'boolean') return ['eq', 'ne', 'is_null', 'not_null', 'in', 'not_in']
   const operators = ['eq', 'ne', 'lt', 'lte', 'gt', 'gte', 'is_null', 'not_null']
   if (datasetTextKind(kind)) operators.push('contains', 'not_contains')

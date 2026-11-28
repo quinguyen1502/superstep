@@ -53,8 +53,17 @@ class DatasetColumnFormat(BaseModel):
     date_style: Literal["short", "medium", "long", "iso"] | None = None
 
 
+class DatasetRelationDefinition(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    target_dataset_id: Annotated[str, Field(pattern=r"^[a-f0-9]{32}$")]
+    display_key: ColumnKey
+
+
 class DatasetColumnIn(DatasetFieldContract):
+    kind: ColumnKind | Literal["relation"]
     label: Label
+    relation: DatasetRelationDefinition | None = None
     validation_rules: DatasetColumnRules | None = None
     display_format: DatasetColumnFormat | None = None
 
@@ -91,6 +100,14 @@ class DatasetColumnUpdate(BaseModel):
 
     column: DatasetColumnIn
     revision: int = Field(ge=1)
+
+
+class DatasetRelationLink(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    target_row_id: Annotated[str, Field(pattern=r"^[a-f0-9]{32}$")]
+    revision: int = Field(ge=1)
+    schema_revision: int = Field(ge=1)
 
 
 RowValues = Annotated[dict[ColumnKey, DatasetValue], Field(max_length=100)]
