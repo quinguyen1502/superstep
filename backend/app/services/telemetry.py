@@ -31,7 +31,7 @@ ENUMS = {"rating": frozenset({"up", "down"}),
          "transport": frozenset({"stdio", "http", "managed"}),
          "runtime": frozenset({"docker", "remote", "subprocess"}),
          "language": frozenset({"python", "typescript"}),
-         "scope": frozenset({"demo", "approval_callback", "chat_trigger", "public_chat", "api_trigger", "code", "pat",
+         "scope": frozenset({"demo", "approval_callback", "chat_trigger", "public_chat", "public_dataset", "api_trigger", "code", "pat",
                              "email_node", "login", "identity_code", "other"})}
 LLM_CODES = frozenset({"MODEL_NOT_FOUND"})  # with every PROVIDER_* code
 SNAPSHOT_TTL = 5.0  # seconds one probe snapshot serves every gauge callback

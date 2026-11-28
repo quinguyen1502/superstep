@@ -20,7 +20,7 @@ export function DatasetColumnOptions({ column, onChange }: { column: ColumnDraft
   const updateFormat = (next: DatasetDisplayFormat) => onChange({ ...column, display_format: { ...formatting, ...next } })
 
   return <>
-    {(text || number || date || email) && <fieldset className="grid gap-2 rounded-md border p-3 sm:col-span-2 sm:grid-cols-2">
+    {!column.formula && (text || number || date || email) && <fieldset className="grid gap-2 rounded-md border p-3 sm:col-span-2 sm:grid-cols-2">
       <legend className="px-1 text-sm">{t('dataset.columnRules')}</legend>
       {text && (['min_length', 'max_length'] as const).map(key => <div className="space-y-1" key={key}>
         <Label htmlFor={`${id}-${key}`}>{t(`dataset.rule.${key}`)}</Label>

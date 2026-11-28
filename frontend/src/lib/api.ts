@@ -1,4 +1,5 @@
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
+import { isDatasetSharePage } from '@/lib/dataset-shares'
 // the JWT lives in an HttpOnly cookie that scripts cannot read. The page keeps only the user and the expiry.
 type Session = { expires_at: number; user: { id: string; email: string } }
 localStorage.removeItem('token')  // tokens stored by older versions
@@ -22,7 +23,8 @@ export const loginUrl = (expired: boolean, next = location.pathname + location.s
 export function sessionExpired() {
   if (location.pathname === '/login') return
   // Flag survives the race with <Protected> re-rendering after the session is cleared.
-  clearSession(); sessionStorage.setItem('lgs_expired', '1'); location.href = loginUrl(true)
+  clearSession(); sessionStorage.setItem('lgs_expired', '1')
+  if (!isDatasetSharePage(location.pathname)) location.href = loginUrl(true)
 }
 /** Auto-logout exactly when the token expires (call once at app start). */
 let timer: number | undefined
@@ -46,9 +48,10 @@ export async function api<T = any>(path: string, opts: RequestInit & { json?: an
   try { r = await fetch(path, { ...opts, headers }) } catch { throw new ApiError({ code: 'NETWORK_ERROR' }, 0) }
   if (opts.response === 'blob' && r.ok) return await r.blob() as T
   const body = await r.json().catch(() => null)
-  if (r.status === 401 && !path.startsWith('/api/auth')) { sessionExpired(); throw new ApiError(body?.error ?? { code: 'AUTH_TOKEN_EXPIRED' }, 401) }
+  const usesStudioSession = opts.credentials !== 'omit' && !path.startsWith('/api/auth')
+  if (r.status === 401 && usesStudioSession) { sessionExpired(); throw new ApiError(body?.error ?? { code: 'AUTH_TOKEN_EXPIRED' }, 401) }
   // deactivated by an admin: drop the session; signing in again shows the reason
-  if (body?.error?.code === 'AUTH_ACCOUNT_DISABLED' && !path.startsWith('/api/auth')) { clearSession(); location.href = '/login' }
+  if (body?.error?.code === 'AUTH_ACCOUNT_DISABLED' && usesStudioSession) { clearSession(); location.href = '/login' }
   if (!body?.success) throw new ApiError(body?.error ?? { code: r.status >= 500 ? 'INTERNAL_ERROR' : 'HTTP_ERROR', message: `HTTP ${r.status}` }, r.status)
   return body.data
 }

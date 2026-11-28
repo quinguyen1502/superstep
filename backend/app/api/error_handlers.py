@@ -6,6 +6,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from ..core.errors import AppError
 from ..core.logging import get_logger
 from ..schemas.envelope import fail
+from .dataset_share_http import share_response_headers
 
 log = get_logger("api")
 HTTP_CODES = {404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED", 413: "PAYLOAD_TOO_LARGE"}
@@ -36,6 +37,6 @@ def register_error_handlers(app: FastAPI) -> None:
         return respond(err)
 
     @app.exception_handler(Exception)
-    async def unhandled(_: Request, exc: Exception):
+    async def unhandled(request: Request, exc: Exception):
         log.exception("unhandled error: %s", exc)
-        return respond(AppError("INTERNAL_ERROR"))
+        return respond(AppError("INTERNAL_ERROR", headers=share_response_headers(request.url.path)))

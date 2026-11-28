@@ -201,7 +201,7 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
                       <SelectTrigger aria-label={t('dataset.csvMapColumn', { column: index + 1, name: header })} className="w-full min-w-36"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value={SKIP}>{t('dataset.csvSkip')}</SelectItem>
-                        {columns.filter(column => column.key && !datasetReadOnly(column.kind)).map((column, columnIndex) =>
+                        {columns.filter(column => column.key && !datasetReadOnly(column)).map((column, columnIndex) =>
                           <SelectItem key={columnIndex} value={column.key} disabled={mapping.some((key, item) => item !== index && key === column.key)}>
                             <DatasetFieldIcon kind={column.kind} /><span className="truncate">{column.label}</span>
                           </SelectItem>)}
@@ -218,7 +218,7 @@ export function DatasetCsvDialog({ dataset, teams, initial, onClose, onImported 
                 <legend className="px-1 text-sm font-medium">{preview.headers[index]}</legend>
                 <DatasetColumnFields column={column} onChange={next => {
                   setColumns(current => current.map((item, position) => position === index ? next : item))
-                  if (next.key !== column.key || datasetReadOnly(next.kind)) setMapping(current => current.map(key => key === column.key ? datasetReadOnly(next.kind) ? null : next.key || null : key))
+                  if (next.key !== column.key || datasetReadOnly(next)) setMapping(current => current.map(key => key === column.key ? datasetReadOnly(next) ? null : next.key || null : key))
                   changeDraft()
                 }} />
               </fieldset>)}

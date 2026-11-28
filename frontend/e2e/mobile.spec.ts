@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test'
 import { login, newWorkflow, SIMPLE } from './helpers'
+import { vt } from './catalog'
 // phones (below 768px). The pages never scroll sideways; the editor shows one pane at a time with a tab bar
 // at the bottom (Canvas · Nodes · Config · Run, plus Chat while it is open).
 const PHONE = { width: 375, height: 812 }
@@ -22,7 +23,9 @@ test('Workflow list and Settings fit a phone', async ({ page }) => {
 test('Editor on a phone: tab bar, tap to add a node, Config for the selection, Run and Chat panes', async ({ page }) => {
   await page.setViewportSize(PHONE)
   const H = await login(page); const wid = await newWorkflow(page, H, SIMPLE(`Phone ${Date.now()}`))
+  await page.evaluate(() => localStorage.setItem('theme', 'dark'))
   await page.goto(`/workflows/${wid}`)
+  await expect(page.locator('html')).toHaveClass(/dark/)
   const tab = (id: string) => page.locator(`#mobile-tab-${id}`)
   await expect(tab('canvas')).toHaveAttribute('data-state', 'active')
   for (const id of ['run-btn', 'save-btn', 'more-btn']) await expect(page.locator(`#${id}`)).toBeInViewport({ ratio: 1 })
@@ -37,6 +40,18 @@ test('Editor on a phone: tab bar, tap to add a node, Config for the selection, R
   await expect(page.locator('#config-panel')).toBeVisible()
   await page.locator('#config-tab-settings').click()
   await expect(page.locator('#llm-prompt')).toBeVisible()
+  const checkActiveUnderline = (id: string) => expect.poll(() => page.locator(id).evaluate(el => {
+    const style = getComputedStyle(el)
+    return style.borderBottomWidth === '2px' && style.borderBottomColor === style.color
+  })).toBe(true)
+  await checkActiveUnderline('#config-tab-settings')
+  const addField = page.locator('#config-pane-settings').getByRole('button', { name: vt('editor.newField.title'), exact: true })
+  await expect(addField).toHaveAttribute('data-variant', 'ghost')
+  await addField.scrollIntoViewIfNeeded()
+  await page.screenshot({ path: test.info().outputPath('mobile-dark-prompt.png'), animations: 'disabled' })
+  await addField.click()
+  await expect(page.getByRole('dialog', { name: vt('editor.newField.title') })).toBeVisible()
+  await page.keyboard.press('Escape')
 
   // Run switches to the Run pane: input above the logs
   await page.locator('#run-btn').click()
@@ -48,6 +63,8 @@ test('Editor on a phone: tab bar, tap to add a node, Config for the selection, R
   // Nodes: a tap adds the node in the middle of the canvas, selected
   await tab('nodes').click()
   await expect(page.locator('#palette-tap-hint')).toBeVisible()
+  await checkActiveUnderline('#palette-nodes-tab')
+  await page.screenshot({ path: test.info().outputPath('mobile-dark-tabs.png'), animations: 'disabled' })
   // the first card's top border is not clipped by the scroll area
   const top = await page.locator('#palette-nodes').evaluate(el => el.querySelector('[data-testid=palette-card]')!.getBoundingClientRect().top - el.querySelector('[data-slot=scroll-area-viewport]')!.getBoundingClientRect().top)
   expect(top).toBeGreaterThan(0)

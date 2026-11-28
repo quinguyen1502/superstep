@@ -2,6 +2,7 @@
 site; a published chat page /c/{slug} may be framed by the sites in its embed_origins."""
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from app.api.dataset_share_http import DatasetShareHeaders
 from app.api.static import mount_frontend
 
 
@@ -12,6 +13,7 @@ def client(tmp_path):
     @app.get("/api/ping")
     def ping(): return {"ok": True}
     mount_frontend(app, str(tmp_path), lambda slug: "'self' https://shop.example.com" if slug == "help" else "'none'")
+    app.add_middleware(DatasetShareHeaders)
     return TestClient(app)
 
 
@@ -33,3 +35,16 @@ def test_nothing_changes_without_a_built_frontend(tmp_path):
     @app.get("/api/ping")
     def ping(): return {"ok": True}
     assert "x-frame-options" not in TestClient(app).get("/api/ping").headers
+
+
+def test_dataset_reader_document_is_not_indexed_cached_or_sent_as_referrer(tmp_path):
+    c = client(tmp_path)
+    for path in ("/dataset-view", "/dataset-view/", "/DATASET-VIEW?theme=dark"):
+        r = c.get(path)
+        assert r.status_code == 200 and '<div id="root">' in r.text
+        assert r.headers["x-frame-options"] == "DENY"
+        assert r.headers["x-robots-tag"] == "noindex"
+        assert r.headers["cache-control"] == "no-store"
+        assert r.headers["referrer-policy"] == "no-referrer"
+    for path in ("/workflows", "/c/help", "/dataset-view-extra"):
+        assert "x-robots-tag" not in c.get(path).headers

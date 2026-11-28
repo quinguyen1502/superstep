@@ -182,6 +182,99 @@ Secrets are encrypted in the service before they reach the repository; only `res
 - Observer receive/push/heartbeat tasks share an AnyIO task group tied to the ASGI lifetime; PubSub connection cleanup is shielded from cancellation and does not leave detached subscriptions.
 - Studio reads snapshots through the existing `/api/workflows/{wid}/runs` envelope API after an invalidation, reconnect or focus, with a disconnected polling fallback. The current chat socket additionally updates its own run immediately. Selected runs remain selected and update their persisted traces; workflow switches and stale responses are guarded. No migration or expanded history permission.
 
+## Dataset realtime
+
+The Dataset writer lock covers a persisted `data_revision` in addition to the
+existing schema revision and each row's optimistic revision. A new Dataset
+starts at data revision 1. Each later transaction that changes its definition
+or rows advances the marker once. Services publish a Dataset-scoped signal
+after committing the change. A missed signal leaves the marker available for
+resync.
+
+| Writer | Effect |
+| --- | --- |
+| Dataset create | Initializes the revision and publishes once after creation. |
+| Studio insert, update, upsert, delete | Advances and publishes once after a changed write. |
+| Studio batch and undo | Advances and publishes once for the whole transaction. An unchanged batch keeps its revision. |
+| CSV | Creating a Dataset and its rows initializes one revision. Appending rows advances one revision. Preview keeps the marker unchanged. |
+| Workflow Dataset node, Agent tools, Connected API | Use the shared row writer. Receipt replay, dry run and no-op upserts keep the marker unchanged. |
+| Schema changes and Formula backfill | Advance the schema and data revisions in the same transaction. |
+| Dataset deletion | Explicit deletion wakes observers after commit. Deleted Datasets and removed memberships fail authorization. Cascading deletion and access changes are detected on the next push or heartbeat. |
+
+`GET /api/datasets/{dataset_id}/revisions` returns `schema_revision` and
+`data_revision` in the standard envelope with `Cache-Control: no-store`. It
+uses the same Dataset visibility rule as row reads and selects only the two
+revisions.
+
+`/ws/datasets/{dataset_id}/changes` checks the Studio session cookie and
+browser origin. The configured external origin via `STUDIO_PUBLIC_URL` works
+behind a reverse proxy. The server subscribes and reads the current marker
+before sending `ready`. It sends `dataset_changed` with the same two revision
+fields when the marker advances and a `ping` every 20 seconds. The server
+authorizes the session and Dataset again before either type of push. Losing
+authentication closes the socket with 4401. Losing Dataset access closes it
+with 4403. Clients read rows and schema through their existing authorized
+endpoints.
+
+The memory hub keeps one pending signal per Dataset socket. Redis Pub/Sub
+fans signals out across API and worker processes. The socket coalesces
+signals by the persisted marker and closes a stalled send after five seconds.
+Reconnect, focus and fallback reads can use the revision endpoint to recover
+the latest state. A publish failure does not undo a committed write.
+
+Migration `0073_dataset_data_revision` initializes existing Datasets at 1.
+Upgrade the API and worker together so every writer advances the marker.
+The database can retain the column if live consumers are disabled. If the
+migration is downgraded and reapplied, active readers need a fresh snapshot.
+
+## Dataset share links
+
+Share management uses the same authorization as Dataset Access. The endpoints
+under `/api/datasets/{dataset_id}/shares` are:
+
+| Method and suffix | Result |
+| --- | --- |
+| GET | Active links with their ID, name, fields, fixed filter and availability. Accepts `limit` and `offset`. |
+| POST | Create from `name`, ordered `fields`, optional `filter_tree`, and the current `schema_revision`. Returns the link record and its one-time `token`. |
+| POST `/preview` | The same view and page as a visitor, using the proposed configuration and optional `search`, `limit` and `offset`. |
+| POST `/{share_id}/rotate` | Replace the secret atomically and return the new `token`. |
+| DELETE `/{share_id}` | Revoke the link. |
+
+Creation and preview check the current schema revision. The share stores a
+hash of the secret, the selection and fixed filter, and signatures for the
+referenced column kinds and the relevant Formula definitions and their
+dependencies. Renaming a label and adding unrelated columns can preserve the
+share. Archiving a referenced column or changing a relevant Formula makes
+the link unavailable. A manager can revoke such a link and create a new one
+after reviewing the current view. Migration `0074_dataset_shares` adds the
+storage. Dataset deletion removes its links.
+
+Anonymous clients use `GET /api/public/v1/dataset-view` for the published name,
+column keys, labels, kinds and search availability. `GET .../rows` returns
+`{items, next_offset}`, where each item is a map of approved field keys to
+values. The repository applies the fixed filter and selects only those fields
+in SQL. Search checks only the published text-like columns. The row API omits
+identifiers, counts and Formula diagnostics. It returns a generic unavailable
+response for an invalid, rotated, revoked or incompatible link and rechecks
+authorization before emitting a page. Relation fields are outside the v1 scope.
+
+Send the capability only in `X-Dataset-Share`. Browser links keep it in the
+fragment of `/dataset-view` and transfer it to the header without putting it
+in the request URL or sending Studio session credentials.
+The application omits it from audit records and telemetry. Proxies should omit
+this header and response bodies from logs. Responses use `Cache-Control:
+no-store`. In both all-in-one and Compose deployments, the reader document
+and anonymous API responses send `X-Robots-Tag: noindex` and
+`Referrer-Policy: no-referrer`.
+
+Management bodies are limited to 256 KiB. Public queries are GETs with up to
+100 rows and 1 MiB of projected items per page, plus the envelope. Search
+takes up to 120 characters. The shared limiter uses a 60-second window and
+defaults to 120 requests per IP and 300 per link. Set
+`STUDIO_PUBLIC_DATASET_RATE_IP` and `STUDIO_PUBLIC_DATASET_RATE_LINK` to tune the
+limits. Redis shares limits across API processes when configured. Disable
+traffic to the share routes before downgrading the migration that stores links.
+
 ## LLM providers
 
 `engine/providers.py` is the provider registry (one strategy class per provider: defaults, model listing, LangChain chat model). `engine/llm.py` dispatches LLM nodes to it; `services/credential_service.py` uses it for validation, model lists and connection tests. Engine failures are `ProviderError(code)` and become `AppError` in the service.

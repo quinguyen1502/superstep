@@ -152,6 +152,10 @@ class AuthService:
         """The signed-in user, checked against the database: deleted or deactivated accounts lose access at once.
         A `pat_` secret is a personal access token. Anything else is a session JWT."""
         if token and token.startswith(PAT_PREFIX): return self._from_pat(token)
+        return self.current_session(token)
+
+    def current_session(self, token: str | None) -> dict:
+        """Verify the session JWT and check that the account and session are still valid."""
         uid = self.user_from_token(token)["id"]
         u = self.users.get_by_id(uid)
         if u is None: raise AppError("AUTH_TOKEN_INVALID")

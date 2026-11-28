@@ -26,8 +26,8 @@
 <table>
   <tr>
     <td width="33%" align="center"><img src="handbook/docs/en/images/chat-tab.png" alt="Chat with a workflow" width="100%"><p>Chat with a workflow</p></td>
-    <td width="33%" align="center"><img src="handbook/docs/en/images/run-trace.png" alt="Live run trace" width="100%"><p>Live run trace</p></td>
-    <td width="33%" align="center"><img src="handbook/docs/en/images/code-tab.png" alt="LangGraph code export" width="100%"><p>LangGraph code export</p></td>
+    <td width="33%" align="center"><img src="docs/screenshots/readme-datasets.png" alt="Support tickets dataset with typed columns and column summaries" width="100%"><p>Dataset grid and summaries</p></td>
+    <td width="33%" align="center"><img src="handbook/docs/en/images/settings-usage.png" alt="Studio Usage dashboard showing run success, token counts, and estimated cost" width="100%"><p>Usage dashboard</p></td>
   </tr>
 </table>
 
@@ -44,7 +44,7 @@
   </tr>
   <tr>
     <td width="50%" valign="top"><b>Python & TypeScript code</b><br>Code nodes in a locked Docker sandbox; any model, MCP and pgvector</td>
-    <td width="50%" valign="top"><b>Learn LangGraph</b><br>Export any workflow as one readable Python file that runs on its own</td>
+    <td width="50%" valign="top"><b>Workflow export</b><br>Inspect and export LangGraph code in Python or TypeScript</td>
   </tr>
 </table>
 
@@ -77,43 +77,52 @@ docker compose up --build   # http://localhost:8080
 
 ## Features
 
-1. **Visual editor:** 14 node types (LLM, Agent, Tool, Condition, For each,
-   Join, Subgraph, MCP, Retriever, Decision, Send email, Human, Start, End)
-   plus read-only Code nodes from imported repos, a typed state with reducers,
-   `{{state.field}}` references checked before a run, and a template library
-   to start from.
-2. **Run traces:** duration, tokens and cost per node, the input, output and
+1. **Visual editor.** Build workflows with LLM, Agent, Condition, Human,
+   and Code nodes. Start from a template and use typed state, reducers,
+   and `{{state.field}}` references that Studio checks before a run.
+2. **Datasets.** Create personal or team tables with typed columns, validation,
+   scoped access, and CSV import and export. Combine nested filters, grouping,
+   pinned columns, and column summaries. Paste or fill cells as a batch, with undo.
+   Dataset nodes and Agent tools can read, write, and aggregate rows within
+   their workflow's grants.
+   [Datasets guide](https://quinguyen1502.github.io/superstep/guide/datasets/)
+3. **Run traces:** duration, tokens and cost per node, the input, output and
    state diff of every step, step-by-step and run-to-node debugging. Test
    cases check a workflow's results, and test runs can be compared.
-3. **Agent node:** a model picks and calls the tools you allow (MCP server
+4. **Agent node:** a model picks and calls the tools you allow (MCP server
    tools, HTTP requests, built-in functions, knowledge base search) until it
    answers, with a round limit and an approval before the tools you mark.
    Agents hand the conversation off to each other, a chat continues with the
    agent that answered last, and the Help desk template shows the pattern.
-4. **Human in the loop:** a Human node pauses a run from a checkpoint; approve
+5. **Human in the loop:** a Human node pauses a run from a checkpoint; approve
    in the studio's Approvals inbox, or from Slack, Telegram, WhatsApp, email
    or Teams; deadlines send reminders, escalate or expire a waiting run. AI
    review can suggest an answer or approve automatically under rules, with a
    daily cap, kill switches and a notice to the run owner.
-5. **Chat:** chat with a workflow in the studio, on a published page or in a
+6. **Chat:** chat with a workflow in the studio, on a published page or in a
    widget; people attach images and documents, which reach LLM and Agent
    nodes. Files are stored in the database, a folder or an S3 bucket, and
    `superstep attachments migrate` moves them between backends.
-6. **Triggers:** per-workflow API tokens, sync and async runs, signed result
-   webhooks with retries, cron schedules with time zones, and chat triggers: a
-   command to the Slack app or Telegram bot starts a run and the bot replies.
-7. **Reliability:** checkpoints in the database, leased worker jobs, and
+7. **Triggers and schedules.** Start a sync or async run with a workflow
+   token, or trigger a run from Slack or Telegram. Configure signed result
+   webhooks with retries. Set cron schedules with time zones in Studio, or
+   manage and preview them through the Python and TypeScript SDKs.
+   [Public schedule API](https://quinguyen1502.github.io/superstep/run/public-api/#schedules)
+8. **Reliability:** checkpoints in the database, leased worker jobs, and
    effectively-once side effects through idempotency keys and a result ledger.
-8. **Models and tools:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and
+9. **Models and tools:** OpenAI, Anthropic, OpenRouter, Ollama, LM Studio and
    OpenAI-compatible servers; pgvector knowledge bases; MCP servers; Python
    and TypeScript code in a locked Docker container.
-9. **Operations:** immutable versions with diff and restore, admin, editor
-   and viewer roles, shares and teams, an audit log, and OpenTelemetry traces
-   to OTLP or LangSmith. The `superstep` CLI installs, upgrades, backs up
-   and checks an instance.
-10. **Learn LangGraph:** the Code tab shows any workflow as one readable LangGraph
-   Python file that runs on its own (offline with a mock model), with the
-   selected node's code highlighted, and exports it to your own project.
+10. **Operations and observability.** Track tokens and estimated cost by
+    model, user, and team. Set monthly budgets with notifications, monitor run
+    success and API availability, and collect metrics and traces with
+    OpenTelemetry. Studio includes roles, an audit log, and workflow version
+    history. The CLI installs, upgrades, backs up, and checks instances.
+    [Observability guide](https://quinguyen1502.github.io/superstep/operate/observability/)
+11. **Workflow export.** Use the Code tab to inspect generated LangGraph code
+    for the selected node. Export supported workflows as a Python or TypeScript
+    file or project with Dataset bindings where applicable.
+    [Export guide](https://quinguyen1502.github.io/superstep/guide/python-export/)
 
 ## How it works
 

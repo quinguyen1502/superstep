@@ -12,9 +12,8 @@ adds the rest:
 - the visitor may run unsaved edits (run_service); the engine turns off Code, HTTP Tool and Send email nodes and runs LLM
   and Decision nodes on the offline mock model, so nothing leaves the server.
 - check_run(): at most STUDIO_DEMO_RUN_RATE_LIMIT runs per client IP and minute.
-- seed(): the visitor template and the sample workflows (shared with the visitor as viewer; chat turned on for the Chatbot) exist
-  after every boot, since the free
-  plan's SQLite file is wiped when the service sleeps.
+- seed(): the visitor template, sample workflows and read-only sample dataset exist after every boot,
+  since the free plan's SQLite file is wiped when the service sleeps. Web chat is enabled for the Chatbot.
 The admin (STUDIO_ADMIN_EMAILS + STUDIO_ADMIN_PASSWORD) is a normal account and is not restricted."""
 import re, secrets, time
 from typing import Optional
@@ -27,6 +26,7 @@ from ..models.database import Database
 from ..models.workflow_share import WorkflowShare
 from ..repositories import (ChatMessageRepository, ChatSessionRepository, ChatTriggerRepository, RunRepository, UserDataRepository, UserRepository,
                             WorkflowRepository, WorkflowShareRepository, WorkflowVersionRepository)
+from . import demo_dataset
 from .rate_limit import RateLimiter
 
 log = get_logger("demo")
@@ -37,14 +37,17 @@ SAMPLES = ("builtin-chatbot", "builtin-router", "builtin-approval")  # the chat-
 CHAT_SAMPLE = "demo-chatbot"  # web chat on, so the Chat panel works for the visitor
 _VISITOR_WRITES = re.compile(r"/api/(auth/(login|logout)|runs/[^/]+/cancel|notifications/(read-all|[^/]+/read)|approvals/inbox/[^/]+"
                              r"|workflows/[^/]+/chat/sessions|chat/sessions/[^/]+)")  # + their own chat sessions (Chat panel)
+_DATASET_READS = re.compile(r"/api/datasets/[^/]+/rows/(query|groups|groups/query|summary)")
 _CLOSED = re.compile(r"/api/auth/(register|password-reset(/confirm)?)")
 UNSAFE = ("POST", "PUT", "PATCH", "DELETE")
 
 
 def refuses(method: str, path: str, uid: Optional[str]) -> bool:
     """True when demo mode refuses this HTTP request (DEMO_READ_ONLY). Reads are always let through."""
-    if method.upper() not in UNSAFE: return False
+    method = method.upper()
+    if method not in UNSAFE: return False
     if _CLOSED.fullmatch(path): return True
+    if method == "POST" and _DATASET_READS.fullmatch(path): return False
     return is_visitor(uid) and not _VISITOR_WRITES.fullmatch(path)
 
 
@@ -69,7 +72,7 @@ class DemoService:
 
 
 def seed(db: Database, owner: str, jobs=None) -> None:
-    """Idempotent: the visitor account (viewer, the public password) and the samples owned by `owner` (an admin)."""
+    """Ensure the public viewer account and its shared workflow and dataset samples exist."""
     from .workflow_service import WorkflowService
     from .chat_session_service import ChatSessionService
     users, wfs, shares = UserRepository(db), WorkflowRepository(db), WorkflowShareRepository(db)
@@ -86,7 +89,10 @@ def seed(db: Database, owner: str, jobs=None) -> None:
         if wid == CHAT_SAMPLE and triggers.web(wid) is None: chats.save_settings(wid, owner, {"enabled": True})
         if shares.role_of(wid, VISITOR_ID) is None:
             shares.upsert(WorkflowShare(workflow_id=wid, user_id=VISITOR_ID, role="viewer", created=time.time(), shared_by=owner))
-    purge_expired(db, jobs=jobs)
+    now = time.time()
+    purge_expired(db, now, jobs=jobs)
+    demo_dataset.seed(db, owner)
+    demo_dataset.share(db, users.ids_created_before(VISITOR_PREFIX, now), now)
     log.info("Demo mode: %d sample workflows shared with %s", len(samples), VISITOR_EMAIL)
 
 
@@ -102,6 +108,7 @@ def start_visit(db: Database, now: Optional[float] = None, jobs=None) -> str:
     for wid, role in shares.for_user(VISITOR_ID).items():
         w = wfs.get(wid)
         if w is not None: shares.upsert(WorkflowShare(workflow_id=wid, user_id=vid, role=role, created=now, shared_by=w.owner))
+    demo_dataset.share(db, [vid], now)
     return vid
 
 

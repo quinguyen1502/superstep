@@ -70,6 +70,8 @@ def public_chat_rate_ip() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_IP
 def public_chat_rate_user() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_USER", public_chat_rate_ip()))
 def public_chat_rate_read() -> int: return max(0, _int("STUDIO_PUBLIC_CHAT_RATE_READ", 120))  # page, session reads and new chats per client IP
 def public_chat_rate_window() -> int: return max(1, _int("STUDIO_PUBLIC_CHAT_RATE_WINDOW", 60))
+def public_dataset_rate_ip() -> int: return max(1, _int("STUDIO_PUBLIC_DATASET_RATE_IP", 120))
+def public_dataset_rate_link() -> int: return max(1, _int("STUDIO_PUBLIC_DATASET_RATE_LINK", 300))
 def chat_attachment_max_mb() -> int:
     """The ceiling on a chat attachment's size in MB; each chat may only lower it."""
     return max(1, _int("STUDIO_CHAT_ATTACHMENT_MAX_MB", 10))
@@ -98,6 +100,7 @@ def attachment_s3() -> dict:
 def attachment_fs_path() -> str:
     """The folder of the `fs` attachment backend; on the data volume by default."""
     return (os.environ.get("STUDIO_ATTACHMENT_FS_PATH") or "/data/attachments").strip()
+def dataset_formulas_enabled() -> bool: return os.environ.get("STUDIO_ENABLE_DATASET_FORMULAS") == "1"
 def dataset_receipt_days() -> int: return max(1, _int("STUDIO_DATASET_RECEIPT_DAYS", 30))
 
 def version_keep() -> int: return max(0, _int("STUDIO_VERSION_KEEP", 0))  # keep last N versions (0 = all)

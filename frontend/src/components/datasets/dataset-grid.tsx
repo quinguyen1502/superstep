@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useEffectEvent, useId, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent, type CSSProperties, type KeyboardEvent, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   cellSelectionFeature, columnGroupingFeature, columnOrderingFeature, columnPinningFeature, columnResizingFeature, columnSizingFeature,
@@ -7,7 +7,7 @@ import {
   type ColumnOrderState, type ColumnSizingState, type PaginationState, type RowSelectionState, type SortingState, type Updater,
 } from '@tanstack/react-table'
 import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual'
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, X } from 'lucide-react'
+import { CircleAlert, ArrowDown, ArrowUp, ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Clipboard, Keyboard, Pin, PinOff, Plus, Rows2, Rows3, Rows4, Search, Settings2, Sigma, Ungroup, WifiOff, X } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -15,13 +15,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from '@/components/ui/checkbox'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useConfirmDelete } from '@/components/use-confirm-delete'
 import { ShortcutCheatsheet } from '@/components/shortcut-cheatsheet'
 import { api, ApiError } from '@/lib/api'
-import { DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
+import { datasetFormulaError, DATASET_QUERY_LIMIT, datasetGroupable, datasetSummaryFunctions, datasetReadOnly, datasetTextKind, datasetUrl, deleteRowName, displayColumnValue, displayValue, emptyDatasetFilters, keepDatasetFilterFields, type DatasetFilters, type DatasetGroupsPage, type DatasetRowGroup, type CellValue, type Dataset, type DatasetColumn, type DatasetColumnSummaries, type DatasetSummaryResult, type DatasetKind, type DatasetRow, type DatasetRowPage, type DatasetRowResult } from '@/lib/datasets'
 import { errorText, type ApiErrorBody } from '@/lib/i18n'
 import { datasetClipboardRows, datasetClipboardText, datasetClipboardValue, type DatasetBatchResult, type DatasetBatchRow } from '@/lib/dataset-clipboard'
 import { cn } from '@/lib/utils'
@@ -34,6 +34,7 @@ import { DatasetColumnControls, DatasetUniqueBadge } from './dataset-column-cont
 import { DatasetFieldIcon } from './dataset-field-icon'
 import { DatasetValueField } from './dataset-fields'
 import { DatasetQueryControls } from './dataset-query-controls'
+import { isDatasetAccessError, useDatasetLive } from './use-dataset-live'
 
 const NO_ROWS: DatasetRow[] = []
 const features = tableFeatures({
@@ -46,6 +47,7 @@ const DIRECTIONS: Record<string, CellSelectionDirection> = { ArrowUp: 'up', Arro
 const MOVEMENT: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] }
 const DIVIDER = 'border-e border-border'
 const CELL_BUTTON = 'w-full justify-start rounded-none hover:bg-transparent dark:hover:bg-transparent'
+const CELL_RANGE_BACKGROUND = 'bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]'
 const MIN_COLUMN_WIDTH = 100
 const MAX_COLUMN_WIDTH = 4096
 const ROW_NUMBER_WIDTH = 56
@@ -84,6 +86,12 @@ function readLayout(key: string): { order?: ColumnOrderState; sizes?: ColumnSizi
 }
 
 const GROUP_PAGE_SIZE = 50
+const SNAPSHOT_RETRY = 5_000
+
+function queryRows(url: string, request: string, offset: number, signal: AbortSignal) {
+  const query = JSON.parse(request)
+  return api<DatasetRowPage>(url, { method: 'POST', json: { ...query, offset }, signal })
+}
 const groupKey = (value: CellValue) => JSON.stringify(value)
 
 const ROW_INDEX = 'sticky start-0 z-20 border-e border-border bg-background'
@@ -102,11 +110,49 @@ function inEditorPopup(target: EventTarget | null) {
   return inDatasetCalendar(target) || (target instanceof Element && !!target.closest('[data-dataset-editor-popup]'))
 }
 
-export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, viewOnlyId }: {
+function inCellPreview(target: EventTarget | null) {
+  return target instanceof Element && !!target.closest('[data-dataset-cell-preview]')
+}
+
+function DatasetCellPreview({ anchor, content, value, className, onClose }: {
+  anchor: RefObject<HTMLTableCellElement | null>
+  content: RefObject<HTMLDivElement | null>
+  value: string
+  className: string
+  onClose: () => void
+}) {
+  const [truncated, setTruncated] = useState(false)
+  useEffect(() => {
+    const label = anchor.current?.querySelector('[data-dataset-cell-label]')
+    if (!label) return
+    const observer = new ResizeObserver(() => setTruncated(label.scrollWidth > label.clientWidth))
+    observer.observe(label)
+    return () => observer.disconnect()
+  }, [anchor, value])
+
+  if (!truncated && !value.includes('\n')) return null
+  return <Popover open onOpenChange={open => { if (!open) onClose() }}>
+    <PopoverAnchor virtualRef={anchor} />
+    <PopoverContent ref={content} data-dataset-cell-preview="" aria-hidden="true"
+      // Overlap the focus outline at the join, including its 2px keyboard state.
+      side="bottom" align="start" sideOffset={-2} collisionPadding={8} hideWhenDetached
+      className={cn('max-h-[min(9rem,var(--radix-popover-content-available-height,9rem))] w-(--radix-popover-trigger-width) min-w-0 max-w-(--radix-popover-content-available-width) overflow-y-auto overscroll-contain rounded-none border border-foreground p-2 leading-normal wrap-anywhere whitespace-pre-wrap text-foreground shadow-none ring-0 data-[side=bottom]:border-t-0 data-[side=top]:border-b-0', className)}
+      onOpenAutoFocus={event => event.preventDefault()}
+      onCloseAutoFocus={event => event.preventDefault()}
+      onInteractOutside={event => { if (event.target instanceof Node && anchor.current?.contains(event.target)) event.preventDefault() }}
+      onMouseDown={event => event.preventDefault()}>
+      {value}
+    </PopoverContent>
+  </Popover>
+}
+
+export function DatasetGrid({ dataset, editable, reloadDataset, readDataset, onAccessLost, initialFilters, viewOnlyId }: {
   dataset: Dataset
   editable: boolean
   viewOnlyId?: string
   reloadDataset: () => void
+  readDataset: (id: string, signal: AbortSignal) => Promise<Dataset>
+  onAccessLost: () => void
   initialFilters?: DatasetFilters
 }) {
   const { t } = useTranslation()
@@ -116,8 +162,12 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const gridFooter = useRef<HTMLDivElement>(null)
   const draftRow = useRef<HTMLTableRowElement>(null)
   const inlineEditor = useRef<HTMLFormElement>(null)
+  const previewAnchor = useRef<HTMLTableCellElement>(null)
+  const previewContent = useRef<HTMLDivElement>(null)
+  const [selectingCells, setSelectingCells] = useState(false)
   const saving = useRef(false)
   const restoreEditorFocus = useRef(false)
+  const restoreCellFocus = useRef<string | null>(null)
   const confirm = useConfirmDelete()
   const [autoOffset, setAutoOffset] = useState<number | null>(null)
   const [autoPage, setAutoPage] = useState<DatasetRowPage | null>(null)
@@ -136,6 +186,10 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [offsets, setOffsets] = useState([0])
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 50 })
   const [refresh, setRefresh] = useState(0)
+  const [snapshotError, setSnapshotError] = useState(false)
+  const [snapshotRunning, setSnapshotRunning] = useState(false)
+  const completedSnapshot = useRef('')
+  const completedQuery = useRef('')
   const [selection, setSelection] = useState<RowSelectionState>({})
   const layoutKey = `studio-dataset-layout:${dataset.id}`
   const [storedLayout] = useState(() => readLayout(layoutKey))
@@ -179,13 +233,21 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const [stale, setStale] = useState(false)
   const [busy, setBusy] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const editing = !!edit || !!draft || !!rowDetails || batchBusy
+  const editing = !!edit || !!draft || !!rowDetails || !!pastePreview || batchBusy
+  const live = useDatasetLive(dataset.id, onAccessLost)
+  const [snapshotRevision, setSnapshotRevision] = useState(live.revision)
+  // Keep only the latest pending marker while reading pages or preserving an editor draft.
+  useEffect(() => {
+    if (!editing && !snapshotRunning && autoOffset === null && live.revision) setSnapshotRevision(live.revision)
+  }, [autoOffset, editing, live.revision, snapshotRunning])
+  const canRead = snapshotRevision !== null || live.delayed
   useShortcuts({ cheatsheet: () => {
     if (editing) return false
     setShortcutsOpen(true)
   } }, SHORTCUT_HELP)
   const addingRow = !!draft
-  const offset = offsets[pagination.pageIndex] ?? 0
+  const pageIndex = pagination.pageIndex
+  const offset = offsets[pageIndex] ?? 0
   const url = `${datasetUrl(dataset.id)}/rows`
   const layout = useMemo(() => {
     const remainingFields = new Map(dataset.columns.map(column => [column.key, column]))
@@ -231,51 +293,141 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     }
   }, [dataset.columns, filters, search, summaryColumns])
 
-  const summaryKey = JSON.stringify([dataset.revision, refresh, summaryRequest])
+  const summaryQuery = showSummaries && Object.keys(summaryColumns).length ? JSON.stringify(summaryRequest) : null
+  const summaryKey = JSON.stringify([dataset.revision, summaryQuery])
   const currentSummaryError = summaryError?.key === summaryKey ? summaryError.message : null
   const currentSummary = summary?.key === summaryKey ? summary.data : null
-  useEffect(() => {
-    if (!showSummaries || !Object.keys(summaryRequest.summaries).length) return
-    const controller = new AbortController()
-    void api<DatasetSummaryResult>(`${url}/summary`, {
-      method: 'POST', json: summaryRequest, signal: controller.signal,
-    }).then(result => {
-      if (controller.signal.aborted) return
-      if (result.schema_revision !== dataset.revision) {
-        reloadDataset()
-        return
-      }
-      setSummary({ key: summaryKey, data: result })
-      setSummaryError(null)
-    }).catch(error => {
-      if (!controller.signal.aborted) setSummaryError({ key: summaryKey, message: error.message })
-    })
-    return () => controller.abort()
-  }, [dataset.revision, refresh, reloadDataset, showSummaries, summaryKey, summaryRequest, url])
-
   const groupsRequest = groupColumn ? JSON.stringify({
-    ...summaryRequest, summaries: showSummaries ? summaryRequest.summaries : {},
+    ...summaryRequest, summaries: showSummaries ? summaryColumns : {},
     group_by: groupColumn.key, offset: groupOffset, limit: GROUP_PAGE_SIZE,
   }) : null
-  const groupsRequestKey = JSON.stringify([groupsRequest, dataset.revision, refresh])
+  const groupsRequestKey = JSON.stringify([dataset.revision, groupsRequest])
   const groups = groupResult?.request === groupsRequestKey ? groupResult.data : null
   const groupError = groupsError?.request === groupsRequestKey ? groupsError.message : null
 
+  const rowsQuery = !groupColumn || selectedGroup !== undefined ? JSON.stringify({
+    search: summaryRequest.search,
+    ...(summaryRequest.filter_tree ? { filter_tree: summaryRequest.filter_tree } : {}),
+    sorts: sorting.filter(rule => dataset.columns.some(field => field.key === rule.id))
+      .map(rule => ({ field: rule.id, descending: rule.desc })),
+    ...(groupColumn && selectedGroup !== undefined ? { group_by: groupColumn.key, group: JSON.parse(selectedGroup) as CellValue } : {}),
+    limit: pagination.pageSize,
+  }) : null
+  const rowQueryUrl = `${url}/${groupColumn ? 'groups/query' : 'query'}`
+  const loadedRows = useEffectEvent(() => autoPage?.items.length ?? 0)
+  const canCommitSnapshot = useEffectEvent(() => !editing)
+  const rememberFocusedCell = useEffectEvent(() => {
+    const focused = document.activeElement
+    if (active && focused?.id === cellId(active.row, active.column)) restoreCellFocus.current = focused.id
+  })
+  const [retry, setRetry] = useState(0)
+  const queryKey = JSON.stringify([dataset.revision, refresh, rowsQuery, offset, summaryKey, groupsRequestKey])
+  const snapshotKey = JSON.stringify([queryKey, snapshotRevision, retry])
   useEffect(() => {
-    if (!groupsRequest) return
+    if (!canRead || editing || completedSnapshot.current === snapshotKey) {
+      setSnapshotRunning(false)
+      return
+    }
     const controller = new AbortController()
-    void api<DatasetGroupsPage>(`${url}/groups`, {
-      method: 'POST', body: groupsRequest, headers: { 'Content-Type': 'application/json' }, signal: controller.signal,
-    }).then(result => {
-      if (controller.signal.aborted) return
-      if (result.schema_revision !== dataset.revision) reloadDataset()
-      setGroupResult({ request: groupsRequestKey, data: result })
-      setGroupsError(null)
-    }).catch(error => {
-      if (!controller.signal.aborted) setGroupsError({ request: groupsRequestKey, message: error.message })
+    const { signal } = controller
+    let retryTimer: number | undefined
+    const keepRowCount = loadedRows()
+    setSnapshotRunning(true)
+    const fetchRows = async (request: string) => {
+      const first = await queryRows(rowQueryUrl, request, offset, signal)
+      let joined = first
+      while (joined.next_offset !== null && joined.items.length < keepRowCount && joined.schema_revision === dataset.revision) {
+        const next = await queryRows(rowQueryUrl, request, joined.next_offset, signal)
+        if (next.schema_revision !== dataset.revision) return { first: next, joined: next }
+        joined = { ...next, items: [...joined.items, ...next.items] }
+      }
+      return { first, joined }
+    }
+    const retrySnapshot = () => {
+      setSnapshotError(true)
+      retryTimer = window.setTimeout(() => setRetry(count => count + 1), SNAPSHOT_RETRY)
+    }
+    const checkAccess = <T,>(request: Promise<T>) => request.catch(error => {
+      if (!signal.aborted && isDatasetAccessError(error)) {
+        controller.abort()
+        onAccessLost()
+      }
+      throw error
     })
-    return () => controller.abort()
-  }, [dataset.revision, groupsRequest, groupsRequestKey, reloadDataset, url])
+    async function readSnapshot() {
+      if (snapshotRevision && snapshotRevision.schema_revision !== dataset.revision) {
+        const definition = await readDataset(dataset.id, signal)
+        if (signal.aborted || definition.revision !== dataset.revision) return
+      }
+      const [rowsResult, groupsResult, summaryResult] = await Promise.allSettled([
+        rowsQuery ? checkAccess(fetchRows(rowsQuery)) : null,
+        groupsRequest ? checkAccess(api<DatasetGroupsPage>(`${url}/groups`, {
+          method: 'POST', json: JSON.parse(groupsRequest), signal,
+        })) : null,
+        summaryQuery ? checkAccess(api<DatasetSummaryResult>(`${url}/summary`, {
+          method: 'POST', json: JSON.parse(summaryQuery), signal,
+        })) : null,
+      ])
+      if (signal.aborted || !canCommitSnapshot()) return
+      const nextRows = rowsResult.status === 'fulfilled' ? rowsResult.value : null
+      const nextGroups = groupsResult.status === 'fulfilled' ? groupsResult.value : null
+      const nextSummary = summaryResult.status === 'fulfilled' ? summaryResult.value : null
+      if ([nextRows?.first, nextGroups, nextSummary].some(result => result && result.schema_revision !== dataset.revision)) {
+        const definition = await readDataset(dataset.id, signal)
+        if (!signal.aborted && definition.revision === dataset.revision) retrySnapshot()
+        return
+      }
+      const failed = rowsResult.status === 'rejected' || groupsResult.status === 'rejected' || summaryResult.status === 'rejected'
+      if (failed && completedQuery.current === queryKey && snapshotRevision) {
+        retrySnapshot()
+        return
+      }
+      if (nextRows) {
+        rememberFocusedCell()
+        if (!nextRows.first.items.length && pageIndex > 0) {
+          setPagination(current => ({ ...current, pageIndex: Math.min(current.pageIndex - 1,
+            Math.floor(Math.max(0, nextRows.first.total - 1) / current.pageSize)) }))
+        }
+        setPage(nextRows.first)
+        setAutoPage(nextRows.joined === nextRows.first ? null : nextRows.joined)
+        setLoadError('')
+      } else if (rowsResult.status === 'rejected') setLoadError(rowsResult.reason.message)
+      if (nextGroups) {
+        if (!nextGroups.groups.length && groupOffset > 0) {
+          setGroupOffset(0)
+          setExpanded({})
+          setPage(null)
+        } else if (selectedGroup !== undefined && !nextGroups.groups.some(group => groupKey(group.group) === selectedGroup)) {
+          setExpanded({})
+          setPage(null)
+        }
+        setGroupResult({ request: groupsRequestKey, data: nextGroups })
+        setGroupsError(null)
+      } else if (groupsResult.status === 'rejected') setGroupsError({ request: groupsRequestKey, message: groupsResult.reason.message })
+      if (nextSummary) {
+        setSummary({ key: summaryKey, data: nextSummary })
+        setSummaryError(null)
+      } else if (summaryResult.status === 'rejected') setSummaryError({ key: summaryKey, message: summaryResult.reason.message })
+      if (!failed) {
+        completedSnapshot.current = snapshotKey
+        completedQuery.current = queryKey
+        setSnapshotError(false)
+      }
+    }
+    void readSnapshot().catch(error => {
+      if (signal.aborted) return
+      if (isDatasetAccessError(error)) onAccessLost()
+      else retrySnapshot()
+    }).finally(() => { if (!signal.aborted) setSnapshotRunning(false) })
+    return () => { controller.abort(); clearTimeout(retryTimer) }
+  }, [canRead, dataset.id, dataset.revision, editing, groupOffset, groupsRequest, groupsRequestKey,
+    offset, onAccessLost, pageIndex, queryKey, readDataset, rowQueryUrl, rowsQuery, selectedGroup, snapshotKey, snapshotRevision, summaryKey, summaryQuery, url])
+
+  useLayoutEffect(() => {
+    const id = restoreCellFocus.current
+    restoreCellFocus.current = null
+    if (id && document.activeElement === document.body) document.getElementById(id)?.focus({ preventScroll: true })
+  }, [autoPage, page])
 
   useLayoutEffect(() => {
     if (busy || !restoreEditorFocus.current) return
@@ -341,17 +493,22 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     function clearOutsideCell(event: PointerEvent) {
       if (keepInvalidEditorFocused(event)) return
       const target = event.target
-      if (target instanceof Element && (inEditorPopup(target)
+      if (target instanceof Element && (inEditorPopup(target) || inCellPreview(target)
         || target.closest('[data-dataset-clipboard]')
         || (gridViewport.current?.contains(target) && inDatasetCell(target)))) return
       setActive(null)
       if (table.getFocusedCell()) table.resetCellSelection(true)
     }
+    const endCellSelection = () => setSelectingCells(false)
     document.addEventListener('pointerdown', clearOutsideCell, true)
     document.addEventListener('click', keepInvalidEditorFocused, true)
+    document.addEventListener('mouseup', endCellSelection)
+    window.addEventListener('blur', endCellSelection)
     return () => {
       document.removeEventListener('pointerdown', clearOutsideCell, true)
       document.removeEventListener('click', keepInvalidEditorFocused, true)
+      document.removeEventListener('mouseup', endCellSelection)
+      window.removeEventListener('blur', endCellSelection)
     }
   }, [table, editId, saveError])
   const rows = table.getRowModel().rows
@@ -366,23 +523,15 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     getItemKey: index => rows[index]?.id ?? index,
     rangeExtractor: range => {
       const indices = defaultRangeExtractor(range)
-      const current = edit ? rows.findIndex(row => row.id === edit.row.id) : -1
+      const current = rows.findIndex(row => row.id === (edit?.row.id ?? active?.row))
       return current < 0 || indices.includes(current) ? indices : [...indices, current].sort((a, b) => a - b)
     },
   })
   const virtualRows = virtualizer.getVirtualItems()
   useEffect(() => {
-    if (autoOffset === null || groupColumn) return
+    if (autoOffset === null || groupColumn || !rowsQuery) return
     const controller = new AbortController()
-    const fields = new Set(dataset.columns.map(column => column.key))
-    const filterTree = keepDatasetFilterFields(filters, fields)
-    void api<DatasetRowPage>(`${url}/query`, {
-      method: 'POST', signal: controller.signal, json: {
-        search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
-        sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
-        offset: autoOffset, limit: pagination.pageSize,
-      },
-    }).then(result => {
+    void queryRows(rowQueryUrl, rowsQuery, autoOffset, controller.signal).then(result => {
       if (controller.signal.aborted) return
       if (result.schema_revision !== dataset.revision) { reloadDataset(); return }
       setAutoPage(current => {
@@ -390,12 +539,14 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         return previous ? { ...result, items: [...previous.items, ...result.items] } : result
       })
     }).catch(error => {
-      if (!controller.signal.aborted) setLoadError(error.message)
+      if (controller.signal.aborted) return
+      if (isDatasetAccessError(error)) onAccessLost()
+      else setLoadError(error.message)
     }).finally(() => {
       if (!controller.signal.aborted) setAutoOffset(null)
     })
     return () => controller.abort()
-  }, [autoOffset, dataset.columns, dataset.revision, filters, groupColumn, page, pagination.pageSize, reloadDataset, search, sorting, url])
+  }, [autoOffset, dataset.revision, groupColumn, onAccessLost, page, reloadDataset, rowQueryUrl, rowsQuery])
 
   function clearAutoPages() {
     setAutoOffset(null)
@@ -405,7 +556,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function loadMoreOnScroll() {
-    if (!useVirtualRows || editing || loadError || autoOffset !== null || displayPage?.next_offset == null) return
+    if (!useVirtualRows || editing || loadError || snapshotRunning || autoOffset !== null || displayPage?.next_offset == null) return
     const viewport = scrollViewport()
     if (viewport && viewport.scrollTop > 0 && viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < HEIGHTS[rowHeight] * 4) {
       setAutoOffset(displayPage.next_offset)
@@ -419,6 +570,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   const selectedCount = rows.filter(row => row.getIsSelected()).length
   const selectedCell = active && rows.some(row => row.id === active.row) && layout.fields.some(column => column.key === active.column)
     ? active : null
+  const showCellPreview = !editing && !selectingCells && selectedCell && table.getSelectedCellCount() <= 1
   const tabStop = selectedCell ?? { row: rows[virtualRows[0]?.index ?? 0]?.id, column: orderedVisible[0]?.id }
 
   function changeSorting(updater: Updater<SortingState>) {
@@ -430,29 +582,6 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     resetPaging()
     setPage(null)
   }
-
-  useEffect(() => {
-    if (groupColumn && selectedGroup === undefined) return
-    let active = true
-    const fields = new Set(dataset.columns.map(column => column.key))
-    const filterTree = keepDatasetFilterFields(filters, fields)
-    api<DatasetRowPage>(`${url}/${groupColumn ? "groups/query" : "query"}`, {
-      method: 'POST', json: {
-        search: search || null, ...(filterTree.children.length ? { filter_tree: filterTree } : {}),
-        sorts: sorting.filter(rule => fields.has(rule.id)).map(rule => ({ field: rule.id, descending: rule.desc })),
-        ...(groupColumn && selectedGroup !== undefined ? { group_by: groupColumn.key, group: JSON.parse(selectedGroup) as CellValue } : {}),
-        offset, limit: pagination.pageSize,
-      },
-    }).then(result => {
-      if (!active) return
-      if (result.schema_revision !== dataset.revision) reloadDataset()
-      setPage(result)
-      setLoadError('')
-    }).catch(error => {
-      if (active) setLoadError(error.message)
-    })
-    return () => { active = false }
-  }, [filters, dataset.columns, dataset.revision, groupColumn, offset, pagination.pageSize, refresh, reloadDataset, search, selectedGroup, sorting, url])
 
   useEffect(() => {
     const next = searchText.trim()
@@ -467,7 +596,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }, [editing, groupColumn, search, searchText])
 
   function reload() {
-    clearAutoPages()
+    setAutoOffset(null)
     setLoadError('')
     setRefresh(current => current + 1)
   }
@@ -492,7 +621,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   function beginEdit(row: DatasetRow, column: DatasetColumn) {
-    if (!editable || editing || saving.current || datasetReadOnly(column.kind)) return
+    if (!editable || editing || saving.current || datasetReadOnly(column)) return
     setActive({ row: row.id, column: column.key })
     setSaveError(null)
     setStale(false)
@@ -500,7 +629,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
   }
 
   async function applyBatch(updates: DatasetBatchRow[], previous = false, append: Record<string, CellValue>[] = []) {
-    if (!editable || editing || batchLock.current || (!updates.length && !append.length && !previous)) return
+    if (!editable || edit || draft || rowDetails || batchLock.current || (!updates.length && !append.length && !previous)) return
     if (updates.length + append.length > 100 || [...updates.map(row => row.values), ...append].reduce((count, values) => count + Object.keys(values).length, 0) > 500) {
       setBatchError(t('dataset.clipboardLimit'))
       return
@@ -564,7 +693,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const row = rows[rowAt + index]?.original
         const values = Object.fromEntries(cells.map((value, position) => {
           const column = heading(orderedVisible[columnAt + position]?.id ?? '')
-          if (!column || datasetReadOnly(column.kind)) throw new Error('dataset.clipboardReadOnly')
+          if (!column || datasetReadOnly(column)) throw new Error('dataset.clipboardReadOnly')
           return [column.key, datasetClipboardValue(value, column)]
         }))
         if (row) updates.push({ id: row.id, revision: row.revision, values })
@@ -592,7 +721,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         for (let j = range.minColumnIndex; j <= range.maxColumnIndex; j++) {
           const column = orderedVisible[j]
           const field = column && heading(column.id)
-          if (!field || datasetReadOnly(field.kind) || (direction === 'down' ? i === range.minRowIndex : j === range.minColumnIndex)) continue
+          if (!field || datasetReadOnly(field) || (direction === 'down' ? i === range.minRowIndex : j === range.minColumnIndex)) continue
           const source = direction === 'down' ? rows[range.minRowIndex] : row
           const sourceField = direction === 'right' ? orderedVisible[range.minColumnIndex] : column
           if (source && sourceField) update.values[field.key] = source.original.values[sourceField.id] ?? null
@@ -605,6 +734,14 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
 
   function handleCellKey(event: KeyboardEvent<HTMLButtonElement>, row: DatasetRow, column: DatasetColumn) {
     const primary = event.ctrlKey || event.metaKey
+    if (!primary && !event.shiftKey && !event.altKey && (event.key === 'PageDown' || event.key === 'PageUp')) {
+      const preview = previewContent.current
+      if (preview && preview.scrollHeight > preview.clientHeight) {
+        event.preventDefault()
+        preview.scrollBy({ top: event.key === 'PageDown' ? preview.clientHeight : -preview.clientHeight })
+        return
+      }
+    }
     if (primary && !event.shiftKey && ['d', 'r', 'z'].includes(event.key.toLowerCase())) {
       if (!editable) return
       event.preventDefault()
@@ -656,7 +793,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
     setDraftBusy(true)
     setDraftError('')
     try {
-      const values = Object.fromEntries(dataset.columns.filter(column => !datasetReadOnly(column.kind)).map(column => [
+      const values = Object.fromEntries(dataset.columns.filter(column => !datasetReadOnly(column)).map(column => [
         column.key, Object.hasOwn(draft, column.key) ? draft[column.key] : column.default,
       ]))
       await api<DatasetRowResult>(url, { method: 'POST', json: { values, schema_revision: dataset.revision } })
@@ -800,12 +937,16 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
         const isFocused = !editing && isSelected
         const isTabStop = !editing && tabStop.row === row.id && tabStop.column === column.key
         const buttonId = cellId(row.id, column.key)
-        const cellEditable = editable && !datasetReadOnly(column.kind)
+        const cellEditable = editable && !datasetReadOnly(column)
         const usesPicker = column.kind === 'boolean' || column.kind === 'select'
         const multiSelect = column.kind === 'multi_select'
-        return <TableCell key={cell.id} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
+        const display = displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse'))
+        const reason = row.original.formula_errors?.[column.key]
+        const diagnostic = reason ? datasetFormulaError(reason) : undefined
+        const showPreview = isFocused && showCellPreview && value !== null && !!display
+        return <TableCell key={cell.id} ref={isFocused ? previewAnchor : undefined} data-dataset-cell="" style={pinnedStyle(cell.column)} className={cn(DIVIDER, 'relative p-0 whitespace-normal',
           (isEditing && isSelected) || isFocused ? 'bg-muted outline-1 -outline-offset-1 outline-foreground has-[:focus-visible]:outline-2 has-[:focus-visible]:-outline-offset-2' : !rangeSelected && 'hover:bg-muted',
-          rangeSelected && 'bg-[color-mix(in_oklch,var(--foreground)_8%,var(--background))]',
+          rangeSelected && CELL_RANGE_BACKGROUND,
           cell.column.getIsPinned() && '!sticky z-10',
           cell.column.getIsPinned() && !isEditing && !isFocused && !rangeSelected && 'bg-background',
         )}>
@@ -848,16 +989,18 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           }}>
             <DatasetValueField id={editId} label={column.label} column={column} value={edit.value} focus inline openPicker disabled={busy}
               error={saveError?.notice ? undefined : saveError?.message}
+              onPickerClose={usesPicker || multiSelect ? reason => {
+                // A single-value picker can start saving before the menu closes.
+                if (saving.current) return
+                if (reason === 'escape') closeEditor()
+                else if (!saveError) void save(edit.value, reason !== 'outside')
+              } : undefined}
               onCalendarPick={column.kind === 'date' && !stale ? value => { void save(value) } : undefined}
               onChange={value => {
                 if (saveError?.field) setSaveError(null)
                 if (usesPicker && !stale) void save(value)
                 else setEdit({ ...edit, value })
               }} />
-            {multiSelect && !saveError && <div className="flex gap-1 p-1">
-              <Button type="submit" variant="outline" size="sm" disabled={busy}>{t('common.save')}</Button>
-              <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => closeEditor()}>{t('common.cancel')}</Button>
-            </div>}
             {saveError && !saveError.field && <div className="space-y-1 px-2 pb-2">
               {saveError.notice && <div role="status" className="text-xs wrap-anywhere text-muted-foreground">{saveError.message}</div>}
               {stale ? <Button type="button" variant="outline" size="sm" onClick={refreshEdit} disabled={busy}>{t('dataset.refreshEdit')}</Button>
@@ -865,19 +1008,30 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
             </div>}
           </form> :
             <Button id={buttonId} variant="ghost" tabIndex={isTabStop ? 0 : -1}
-              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0', column.kind === 'url' && value && 'pr-9')}
-              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) })}
+              className={cn(CELL_BUTTON, 'absolute inset-0 h-full touch-manipulation px-2 font-normal focus-visible:border-transparent focus-visible:ring-0',
+                column.kind === 'url' && value && 'pr-9')}
+              aria-label={t(cellEditable ? 'dataset.editCell' : 'dataset.readCell', { field: column.label, value: diagnostic ?? display })}
+              title={diagnostic}
               aria-pressed={isFocused || rangeSelected}
-              onMouseDown={event => { if (!editing && event.button === 0) cell.getSelectionStartHandler()(event) }}
+              onMouseDown={event => {
+                if (!editing && event.button === 0) {
+                  setSelectingCells(true)
+                  cell.getSelectionStartHandler()(event)
+                }
+              }}
               onMouseEnter={event => { if (!editing) cell.getSelectionExtendHandler()(event) }}
               onFocus={() => { if (!draft && (!saveError || saveError.notice)) setActive({ row: row.id, column: column.key }) }}
-              onBlur={event => { if (!inDatasetCell(event.relatedTarget)) setActive(null) }}
+              onBlur={event => { if (!inDatasetCell(event.relatedTarget) && !inCellPreview(event.relatedTarget)) setActive(null) }}
               onClick={() => { if (!draft) setActive({ row: row.id, column: column.key }) }}
               onDoubleClick={() => beginEdit(row.original, column)}
               onKeyDown={event => handleCellKey(event, row.original, column)}>
-              <span className={cn('min-w-0 truncate', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{displayColumnValue(value, column, t('dataset.valueTrue'), t('dataset.valueFalse')) || '—'}</span>
+              {diagnostic && <CircleAlert aria-hidden="true" className="text-destructive" />}
+              <span data-dataset-cell-label="" className={cn('min-w-0 truncate', diagnostic && 'text-destructive', column.kind === 'select' && value !== null && 'rounded bg-muted px-1.5')}>{diagnostic || display || '—'}</span>
+              {isFocused && cellEditable && (usesPicker || multiSelect) && <ChevronDown aria-hidden="true" className="ms-auto text-muted-foreground" />}
             </Button>
           }
+          {showPreview && <DatasetCellPreview anchor={previewAnchor} content={previewContent} value={display}
+            className={rangeSelected ? CELL_RANGE_BACKGROUND : 'bg-muted'} onClose={() => setActive(null)} />}
           {!isEditing && column.kind === 'url' && typeof value === 'string' && /^https?:\/\//i.test(value) &&
             <Button asChild variant="ghost" size="icon-sm" className="absolute inset-y-0 right-0 my-auto">
               <a href={value} target="_blank" rel="noopener noreferrer" aria-label={t('dataset.openUrl', { column: column.label })}><ExternalLink /></a>
@@ -986,11 +1140,11 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
           <SelectContent>
             <SelectItem value="$none"><Ungroup aria-hidden="true" />{t('dataset.noGrouping')}</SelectItem>
             {dataset.columns.filter(column => datasetGroupable(column.kind)).map(column =>
-              <SelectItem value={column.key} key={column.key}><DatasetFieldIcon kind={column.kind} /><span className="truncate">{column.label}</span></SelectItem>)}
+              <SelectItem value={column.key} key={column.key}><DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} /><span className="truncate">{column.label}</span></SelectItem>)}
           </SelectContent>
         </Select>
         <Button variant="toolbar" aria-pressed={showSummaries} disabled={editing}
-          onClick={() => { setSummary(null); setSummaryError(null); setShowSummaries(value => !value) }}><Sigma />{t('dataset.summary')}</Button>
+          onClick={() => setShowSummaries(value => !value)}><Sigma />{t('dataset.summary')}</Button>
         <DatasetQueryControls columns={dataset.columns} disabled={editing} filters={filters} sorting={sorting}
           onFilters={applyFilters} onSorting={changeSorting} />
         <DatasetColumnControls columns={layout.orderedFields} visibleKeys={new Set(layout.fields.map(column => column.key))}
@@ -1042,7 +1196,7 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
               aria-sort={priority === 0 && direction ? (direction === 'asc' ? 'ascending' : 'descending') : undefined}>
               <Button variant="ghost" size="sm" className={cn(CELL_BUTTON, 'absolute inset-y-0 left-0 right-2 h-full gap-1 px-2')}
                 onClick={header.column.getToggleSortingHandler()} disabled={!!edit || !!draft}>
-                <DatasetFieldIcon kind={column.kind} />
+                <DatasetFieldIcon kind={column.formula ? 'formula' : column.kind} />
                 <span className="relative top-px min-w-0 truncate leading-none" title={column.label}>{column.label}</span>
                 {column.unique && <DatasetUniqueBadge />}
                 <Icon aria-hidden="true" className="ml-auto" />
@@ -1155,7 +1309,8 @@ export function DatasetGrid({ dataset, editable, reloadDataset, initialFilters, 
       </div>}
       <div className="flex items-center gap-2">
         <span role="status" className="flex items-center gap-1 text-xs text-muted-foreground">
-          {notice && <><Check aria-hidden="true" className="size-3" />{notice}</>}
+          {(live.delayed || snapshotError) && <><WifiOff aria-hidden="true" className="size-4 text-warning" />{t('dataset.liveDelayed')}</>}
+          {!live.delayed && !snapshotError && notice && <><Check aria-hidden="true" className="size-3" />{notice}</>}
         </span>
         <Select value={String(pagination.pageSize)} disabled={editing} onValueChange={value => {
           clearAutoPages()

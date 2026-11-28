@@ -181,6 +181,6 @@ export function TemplateEditor({ value, onChange, fields, readOnly, singleLine, 
         </DropdownMenuItem>) : <DropdownMenuItem disabled className="text-xs">{t('template.noFields')}</DropdownMenuItem>}
       </DropdownMenuContent>
     </DropdownMenu>}
-    {!readOnly && <StateFieldAction size="icon-xs" className="absolute right-8 top-1" onCreated={insert} />}
+    {!readOnly && <StateFieldAction variant="ghost" size="icon-xs" className="absolute right-8 top-1 text-muted-foreground" onCreated={insert} />}
   </div>
 }

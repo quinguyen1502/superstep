@@ -2,12 +2,13 @@ from time import time
 
 from ..core import config
 from ..core.dataset_filters import LIST_FILTERS, MAX_FILTER_VALUES
+from ..core.dataset_formula import materialize_formulas
 from ..core.dataset_rules import enforce_rules
-from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, READ_ONLY_KINDS, SYSTEM_TIME_KINDS, TEXT_KINDS, dataset_timestamp, dataset_size, filter_operators, normalize_cell, summary_functions
+from ..core.dataset_types import INVALID_TEXT, MAX_AGGREGATE_GROUPS, MAX_DATASET_ROWS, MAX_PAGE_BYTES, MAX_ROW_BYTES, SYSTEM_TIME_KINDS, TEXT_KINDS, dataset_timestamp, dataset_size, filter_operators, normalize_cell, summary_functions
 from ..core.errors import AppError
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow
 from ..repositories.dataset_rows import ConnectedWrite, DatasetRowRepository, RowFilter, RowFilterGroup, WorkflowWrite
-from .dataset_service import DatasetService
+from .dataset_service import DatasetService, _compile_formulas
 
 def _active_columns(dataset: Dataset) -> dict[str, DatasetColumn]:
     return {column.key: column for column in dataset.columns if not column.archived}
@@ -27,7 +28,7 @@ def _normalize(column: DatasetColumn, value, *, required: bool | None = None, en
 
 def _write_value(columns, field, value):
     column = _column(columns, field)
-    if column.kind in READ_ONLY_KINDS:
+    if column.read_only:
         raise AppError("DATASET_COLUMN_READ_ONLY", field=field, details={"field": field})
     return _normalize(column, value)
 
@@ -40,10 +41,16 @@ def _row_values(row: DatasetRow, columns) -> dict:
     }
 
 
+def _formula_diagnostics(row: DatasetRow, columns) -> dict:
+    visible = {field: reason for field, reason in (row.formula_errors or {}).items() if field in columns}
+    return {"formula_errors": visible} if visible else {}
+
+
 def _response(row: DatasetRow, columns) -> dict:
     return {
         "id": row.id, "revision": row.revision, "created": row.created, "updated": row.updated,
         "values": _row_values(row, columns),
+        **_formula_diagnostics(row, columns),
     }
 
 
@@ -134,6 +141,31 @@ def _summary_metrics(columns, summaries):
 class DatasetRowService:
     def __init__(self, datasets: DatasetService, rows: DatasetRowRepository):
         self.datasets, self.rows = datasets, rows
+
+    def preview_formula(self, uid: str, dataset_id: str, *, column: dict, revision: int,
+                        row_id: str | None, sample: dict) -> dict:
+        dataset = self.datasets.prepare_formula_preview(uid, dataset_id, column=column, revision=revision)
+        formulas = _compile_formulas(dataset)
+        columns = _active_columns(dataset)
+        key = column["key"]
+        dependencies = {key}
+        for output, formula in reversed(formulas.items()):
+            if output in dependencies:
+                dependencies.update(formula.dependencies)
+        inputs = [name for name, field in columns.items() if name in dependencies and not field.read_only]
+        if row_id is not None:
+            row = self.rows.get(dataset.id, row_id)
+            if row is None:
+                raise AppError("DATASET_ROW_NOT_FOUND")
+            values = row.values
+        else:
+            values = {name: columns[name].default_value for name in inputs}
+            for name, value in sample.items():
+                if name not in inputs:
+                    raise AppError("DATASET_COLUMN_NOT_FOUND", field=name)
+                values[name] = _normalize(columns[name], value, required=False)
+        computed, errors = materialize_formulas(formulas, values)
+        return {"value": computed[key], "inputs": inputs, "error": (errors or {}).get(key)}
 
     def expire_receipts(self) -> int:
         return self.rows.expire_receipts(time() - config.dataset_receipt_days() * 86400)
@@ -259,7 +291,7 @@ class DatasetRowService:
                 try:
                     if field in raw:
                         record[field] = _write_value(columns, field, raw[field])
-                    elif column.kind not in READ_ONLY_KINDS:
+                    elif not column.read_only:
                         record[field] = _normalize(column, column.default_value)
                 except AppError as exc:
                     issues.append({"index": number, "field": field, "error": exc.to_dict()})
@@ -268,6 +300,7 @@ class DatasetRowService:
             raise AppError("DATASET_BATCH_INVALID", details={"issues": issues})
         changed, added = self.rows.batch_update(uid, dataset, updates, records, remove or {})
         if changed or added or remove:
+            self.datasets.notify_changed(dataset.id)
             self.datasets.audit.record(uid, "dataset.rows_batch_update", "dataset", dataset.id,
                                        rows=len(changed), cells=sum(len(item["previous"]) for item in changed),
                                        added=len(added), removed=len(remove or {}))
@@ -291,29 +324,29 @@ class DatasetRowService:
         def build(previous: dict | None) -> dict:
             result = dict(previous or {})
             for field, column in columns.items():
-                if column.kind in READ_ONLY_KINDS:
+                if column.read_only:
                     continue
                 if field in incoming:
                     result[field] = incoming[field]
                 elif field not in result:
                     result[field] = _normalize(column, column.default_value) if previous is None else None
-            if dataset_size(result) > MAX_ROW_BYTES:
-                raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
             return result
 
         if dry_run:
             found = self.rows.query(dataset.id, filters=[RowFilter(columns[key], "eq", match[1])], filter_mode="and",
                                     search=None, search_columns=[], sorts=[], limit=1, offset=0) if match else []
             current = found[0] if found else None
-            values = build(current.values if current is not None else None)
+            values, errors = materialize_formulas(dataset.compile_formulas(), build(current.values if current is not None else None))
+            if dataset_size(values) > MAX_ROW_BYTES:
+                raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
             if projection is None:
                 row = {"id": current.id if current is not None else None,
                        "revision": current.revision if current is not None else None}
             else:
                 now = time()
-                preview = DatasetRow(id=current.id if current is not None else None, values=values,
+                preview = DatasetRow(id=current.id if current is not None else None, values=values, formula_errors=errors,
                                      created=current.created if current is not None else now, updated=now)
-                row = {"id": preview.id, "values": _row_values(preview, projection)}
+                row = {"id": preview.id, "values": _row_values(preview, projection), **_formula_diagnostics(preview, projection)}
             return {"row": row, "inserted": current is None, "dry_run": True}
 
         row, inserted, replayed, changed = self.rows.save(
@@ -321,6 +354,7 @@ class DatasetRowService:
             reveal=projection is not None and (workflow is not None or connected is not None),
         )
         if not replayed and changed:
+            self.datasets.notify_changed(dataset.id)
             action = "dataset.row_insert" if inserted else "dataset.row_update"
             context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
             if connected:
@@ -350,6 +384,7 @@ class DatasetRowService:
             return {"row_id": found, "deleted": True, "dry_run": True}
         deleted_id, replayed = self.rows.remove(uid, dataset, row_id=row_id, match=match, workflow=workflow, connected=connected)
         if not replayed:
+            self.datasets.notify_changed(dataset.id)
             context = {"workflow_id": workflow.workflow_id, "run_id": workflow.run_id} if workflow else {}
             if connected:
                 context.update(credential_id=connected.token_id, operation="delete_row")
@@ -369,5 +404,6 @@ class DatasetRowService:
     def delete(self, uid: str, dataset_id: str, row_id: str, revision: int) -> dict:
         dataset = self.datasets.editable_definition(uid, dataset_id, None)
         self.rows.delete(uid, dataset, row_id, revision)
+        self.datasets.notify_changed(dataset.id)
         self.datasets.audit.record(uid, "dataset.row_delete", "dataset", dataset.id, row_id=row_id)
         return {"ok": True}

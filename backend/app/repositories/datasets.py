@@ -7,6 +7,7 @@ from sqlalchemy import delete, insert, select, text, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, joinedload
 
+from ..core.dataset_formula import Formula, materialize_formulas
 from ..core.dataset_types import MAX_ROW_BYTES, dataset_size, key_digest
 from ..core.dataset_rules import violates_rule
 from ..core.errors import AppError
@@ -14,6 +15,7 @@ from ..models.database import Database
 from ..models.dataset import Dataset, DatasetColumn, DatasetRow, DatasetRowKey
 from ..models.dataset_access import DatasetApiToken, DatasetWorkflowGrant
 from ..models.dataset_receipt import DatasetWriteReceipt
+from ..models.dataset_share import DatasetShare
 from ..models.team import TeamMember
 from ..models.workflow import Workflow
 
@@ -34,6 +36,7 @@ class RowChange:
 def delete_dataset_definitions(session: Session, condition) -> None:
     """Clean up definitions explicitly on SQLite as well as on PostgreSQL."""
     ids = select(Dataset.id).where(condition)
+    session.execute(delete(DatasetShare).where(DatasetShare.dataset_id.in_(ids)))
     session.execute(delete(DatasetWriteReceipt).where(DatasetWriteReceipt.dataset_id.in_(ids)))
     session.execute(delete(DatasetApiToken).where(DatasetApiToken.dataset_id.in_(ids)))
     session.execute(delete(DatasetWorkflowGrant).where(DatasetWorkflowGrant.dataset_id.in_(ids)))
@@ -68,6 +71,17 @@ class DatasetRepository:
         with self.db.session() as session:
             return session.scalars(query).unique().one_or_none()
 
+    def revisions(self, uid: str, dataset_id: str) -> tuple[int, int] | None:
+        statement = select(Dataset.revision, Dataset.data_revision).where(Dataset.id == dataset_id, self._visible(uid))
+        with self.db.session() as session:
+            row = session.execute(statement).one_or_none()
+            return (row.revision, row.data_revision) if row is not None else None
+
+    @staticmethod
+    def advance_data_revision(session: Session, dataset_id: str) -> None:
+        """Advance the persisted marker under the caller's dataset writer lock."""
+        session.get(Dataset, dataset_id).data_revision += 1
+
     @staticmethod
     def raise_integrity_error(exc: IntegrityError) -> None:
         detail = getattr(getattr(exc.orig, "diag", None), "constraint_name", None)
@@ -101,21 +115,26 @@ class DatasetRepository:
             raise AppError("DATASET_SCHEMA_CONFLICT")
 
     def save(self, uid: str, dataset: Dataset, revision: int, *, require_empty: bool = False,
-             unique: tuple[str, bool] | None = None, rows: RowChange | None = None, validate_field: str | None = None) -> tuple[Dataset, int]:
+             unique: tuple[str, bool] | None = None, rows: RowChange | None = None,
+             validate_field: str | None = None, formulas: dict[str, Formula] | None = None) -> tuple[Dataset, int]:
         """Save a definition under the writer lock and return it with the number of rows changed.
 
         `rows` clears or fills one field on every row, and `unique` adds or drops one column's row keys,
-        both in the same transaction as the definition."""
+        both in the same transaction as the definition. A supplied formula plan also backfills\n        results and diagnostics, including clearing a removed computed field."""
         with self.db.session() as session:
             self.lock(session, uid, dataset.id, revision, advance=True)
             if require_empty and session.scalar(select(DatasetRow.id).where(DatasetRow.dataset_id == dataset.id).limit(1)):
                 raise AppError("DATASET_SCHEMA_HAS_ROWS")
             dataset.revision = revision + 1
-            dataset.auto_number_counter = session.get(Dataset, dataset.id).auto_number_counter
+            current = session.get(Dataset, dataset.id)
+            dataset.auto_number_counter = current.auto_number_counter
+            dataset.data_revision = current.data_revision
             result = session.merge(dataset)
             session.flush()
             changed = 0
-            if rows is not None:
+            if formulas is not None:
+                changed = self._backfill_formulas(session, dataset.id, formulas, clear=rows.field if rows and rows.clear else None)
+            elif rows is not None:
                 if rows.auto_number:
                     changed = self._backfill_auto_numbers(session, dataset.id, rows.field)
                 elif rows.clear:
@@ -132,8 +151,30 @@ class DatasetRepository:
                     ))
             if validate_field:
                 self._validate_rows(session, result, validate_field)
+            self.advance_data_revision(session, dataset.id)
             self._commit(session)
             return result, changed
+
+    @staticmethod
+    def _backfill_formulas(session: Session, dataset_id: str, formulas: dict[str, Formula], *, clear: str | None) -> int:
+        base = select(DatasetRow).where(DatasetRow.dataset_id == dataset_id).order_by(DatasetRow.id).limit(KEY_BATCH)
+        offset, changed = "", 0
+        while page := list(session.scalars(base.where(DatasetRow.id > offset))):
+            for row in page:
+                inputs = row.values
+                if clear is not None and clear in inputs:
+                    inputs = dict(inputs)
+                    del inputs[clear]
+                values, errors = materialize_formulas(formulas, inputs)
+                if dataset_size(values) > MAX_ROW_BYTES:
+                    raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
+                if values != row.values or errors != row.formula_errors:
+                    row.values, row.formula_errors = values, errors
+                    row.revision += 1
+                    changed += 1
+            offset = page[-1].id
+            session.flush()
+        return changed
 
     @staticmethod
     def _validate_rows(session: Session, dataset: Dataset, field: str) -> None:

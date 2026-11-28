@@ -10,12 +10,20 @@ import { CliAuthorizePage } from '@/pages/CliAuthorize'
 import { ApprovalsPage } from '@/pages/Approvals'
 import { CommandPalette } from '@/components/command-palette'
 import { DemoBanner } from '@/components/demo-banner'
+import { DATASET_SHARE_PAGE, isDatasetSharePage } from '@/lib/dataset-shares'
 
 // The editor (React Flow, CodeMirror, dagre) and Settings load as their own chunks.
 const DatasetsPage = lazy(() => import('@/pages/Datasets').then(m => ({ default: m.DatasetsPage })))
 const EditorPage = lazy(() => import('@/pages/Editor').then(m => ({ default: m.EditorPage })))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then(m => ({ default: m.SettingsPage })))
 const PublicChatPage = lazy(() => import('@/pages/PublicChat').then(m => ({ default: m.PublicChatPage })))  // /c/{slug}, no sign-in
+
+const PublicDatasetPage = lazy(() => import('@/pages/PublicDataset').then(m => ({ default: m.PublicDatasetPage })))
+
+function StudioChrome() {
+  const { pathname } = useLocation()
+  return isDatasetSharePage(pathname) ? null : <><CommandPalette /><DemoBanner /></>
+}
 
 function Protected({ children }: { children: React.ReactElement }) {
   const loc = useLocation()
@@ -24,12 +32,13 @@ function Protected({ children }: { children: React.ReactElement }) {
 }
 scheduleExpiry()
 export default function App() {
-  return <TooltipProvider delayDuration={300}><BrowserRouter><CommandPalette /><DemoBanner /><Suspense fallback={null}><Routes>
+  return <TooltipProvider delayDuration={300}><BrowserRouter><StudioChrome /><Suspense fallback={null}><Routes>
     <Route path="/login" element={<AuthPage mode="login" />} />
     <Route path="/register" element={<AuthPage mode="register" />} />
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/c/:slug" element={<PublicChatPage />} />
+    <Route path={DATASET_SHARE_PAGE} element={<PublicDatasetPage />} />
     <Route path="/workflows" element={<Protected><WorkflowsPage /></Protected>} />
     <Route path="/datasets/:id?" element={<Protected><DatasetsPage /></Protected>} />
     <Route path="/workflows/:id" element={<Protected><EditorPage /></Protected>} />

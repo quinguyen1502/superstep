@@ -36,6 +36,7 @@ def test_support_ticket_agent_upsert_public_find_and_studio_delete(client, monke
     step, = agent_steps(events)
     assert status == "ok" and step["status"] == "ok" and step["dataset"] == {"count": 1, "operation": "upsert_row"}
     assert tickets(client, did) == ["KEEP-1", "T-100"]
+    assert call(client, "GET", base + "/revisions") == {"schema_revision": 1, "data_revision": 3}
 
     # A read-only Agent tool cannot write, even when the model asks.
     reader_tool = {"name": "look_up", "source": "dataset", "dataset_id": did, "fields": ["ticket"], "filter_ops": {}, "limit": 5}

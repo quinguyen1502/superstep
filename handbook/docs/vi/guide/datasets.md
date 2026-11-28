@@ -46,6 +46,14 @@ Trên màn hình hẹp, danh mục xếp dưới tiêu đề và lưới cuộn 
   giá trị. **Không bằng** khớp cả ô để trống. Mỗi điều kiện lọc có giải thích
   cho toán tử của nó.
 
+Thẻ **Dòng dữ liệu** tự cập nhật các dòng, nhóm và thống kê đang xem khi có
+thay đổi từ studio, tệp CSV được nhập, workflow hoặc ứng dụng kết nối. Bộ lọc,
+thứ tự sắp xếp và vị trí cuộn được giữ khi có thể. Studio giữ bản nháp của ô
+hoặc dòng và cập nhật sau khi bạn lưu hoặc huỷ. Nếu người khác đã lưu cùng dòng,
+chọn **Tải giá trị hiện tại** để xem giá trị mới và xem lại bản nháp trước khi lưu.
+Studio kiểm tra thay đổi khi bạn quay lại thẻ hoặc kết nối lại. Nếu mất quyền
+truy cập, studio sẽ đóng lưới.
+
 Bạn cần `resources.manage` để tạo tập dữ liệu hoặc đổi dòng. Ai nhìn thấy tập
 dữ liệu thì đọc được dòng. Khi thiếu quyền đó, các nút tạo, sửa, nhập, và xoá vẫn
 hiện nhưng bị tắt, kèm ghi chú giải thích lý do. Liên kết tới tập dữ liệu đã bị
@@ -93,6 +101,25 @@ cụ của Agent không có **Tìm dòng** chỉ đưa cho mô hình các mã đ
 cả khi có quyền đọc và ghi. Upsert vẫn cho biết đã có dòng mang khoá đó hay
 chưa. Nếu điều này cần được giữ kín, hãy dùng **Thêm dòng**. Upsert không đổi giá
 trị nào thì giữ nguyên revision và thời điểm cập nhật của dòng.
+
+### Chia sẻ khung xem chỉ đọc {#share-links}
+
+Người quản lý tập dữ liệu có thể mở **Quyền truy cập → Liên kết chia sẻ →
+Tạo liên kết chia sẻ**, đặt tên cho khung xem và chọn các cột công khai.
+Thêm **Bộ lọc cố định** để giới hạn các dòng được hiển thị. Bộ lọc có thể
+dùng cột riêng tư và vẫn giữ cột đó ngoài khung xem công khai. Chọn
+**Xem trước** để kiểm tra các cột và dòng trước khi tạo liên kết.
+
+Sao chép địa chỉ công khai khi liên kết xuất hiện. Bất kỳ ai có địa chỉ đó
+đều có thể mở khung xem mà không cần tài khoản Superstep. Khách có thể
+chuyển trang và tìm trong các cột văn bản công khai. Các thay đổi của dòng
+khớp bộ lọc sẽ hiển thị vào lần truy cập tiếp theo. Khung xem chỉ có quyền đọc.
+
+**Đổi liên kết** thay thế địa chỉ ngay lập tức và hiển thị địa chỉ mới một lần.
+**Thu hồi liên kết chia sẻ** sẽ xoá quyền truy cập. Lần truy cập tiếp theo qua
+địa chỉ cũ hoặc đã thu hồi sẽ báo liên kết không khả dụng. Một thay đổi
+không tương thích ở cột được dùng cũng có thể vô hiệu hoá liên kết. Khi đó,
+kiểm tra cột và bộ lọc hiện tại, tạo liên kết mới và thu hồi liên kết cũ.
 
 ## CSV {#csv}
 

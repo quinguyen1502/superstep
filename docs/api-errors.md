@@ -51,6 +51,9 @@
 | `DATASET_GRANT_DENIED` | 403 | The workflow does not have the required dataset grant |
 | `DATASET_MANAGE_DENIED` | 403 | Only the dataset owner or an admin can change its schema, access, or tokens, or delete it |
 | `DATASET_OWNER_INVALID` | 400 | The new owner must be a member of the dataset's team who can manage resources |
+| `DATASET_SHARE_NOT_FOUND` | 404 | This dataset share link is unavailable |
+| `DATASET_SHARE_SCHEMA_CHANGED` | 409 | The shared fields changed. Create a new link after reviewing the fields |
+| `DATASET_SHARE_FIELD_UNAVAILABLE` | 400 | Field {field} cannot be used in a dataset share |
 | `DATASET_TOKEN_NOT_FOUND` | 404 | Dataset token not found |
 | `DATASET_RECEIPT_CONFLICT` | 409 | The dataset write key was already used with different arguments |
 | `DATASET_NODE_ARGUMENTS_INVALID` | 400 | Invalid arguments or binding for the Dataset node |
@@ -62,6 +65,8 @@
 | `DATASET_NOT_FOUND` | 404 | Dataset not found |
 | `DATASET_COLUMN_NOT_FOUND` | 404 | Dataset column not found |
 | `DATASET_COLUMN_READ_ONLY` | 400 | Dataset column {field} is read-only |
+| `DATASET_FORMULA_DISABLED` | 403 | Dataset Formula configuration is disabled |
+| `DATASET_FORMULA_INVALID` | 400 | Invalid formula for dataset column {field} |
 | `DATASET_COLUMN_RULE_VIOLATION` | 400 | Value violates the validation rules for {field} |
 | `DATASET_COLUMN_RULE_EXISTING_ROWS` | 409 | {count} existing rows violate the rules for {field} |
 | `DATASET_NAME_TAKEN` | 409 | A dataset with this name already exists in this scope |
