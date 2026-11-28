@@ -284,3 +284,26 @@ def test_agent_dataset_filters_ignore_case_and_ne_matches_empty_cells(client, mo
     assert json.loads(response) == {"rows": [{"ticket": "WEBHOOK-2"}], "truncated": False}
     op = seen[0][1][0]["parameters"]["properties"]["filters"]["items"]["properties"]["op"]
     assert "ignores letter case" in op["description"] and "empty cells" in op["description"]
+
+
+def test_agent_reads_typed_formula_projection(client, monkeypatch):
+    from test_dataset_formula_persistence import column, formula
+
+    monkeypatch.setenv("STUDIO_ENABLE_DATASET_FORMULAS", "1")
+    definition = create(client, name="Agent formula", columns=[
+        column("ticket", "text"), column("count", "number"), formula("double", "[count] * 2"),
+    ])
+    did = definition["id"]
+    rows = f"/api/datasets/{did}/rows"
+    for ticket, count in [("Visible", 6), ("Filtered out", 2), ("Missing inputs", None)]:
+        call(client, "POST", rows, body={"values": {"ticket": ticket, "count": count}}, status=201)
+
+    tool = dataset_tool(did, fields=["double"], filter_ops={"double": ["gte"]})
+    wid = save(client, wf(tools=[tool]))
+    grant(client, did, wid, "read")
+    query = {"filters": [{"field": "double", "op": "gte", "value": 10}]}
+    transcript = script(monkeypatch, [("", [tool_call(tool["name"], query)]), ("Finished", [])])
+    events = run(client, {"workflow_id": wid})
+    assert final(events)["answer"] == "Finished"
+    result = next(message["content"] for message in transcript[1][0] if message["role"] == "tool")
+    assert json.loads(result) == {"rows": [{"double": 12}], "truncated": False}

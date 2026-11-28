@@ -1,7 +1,7 @@
 """Standalone Python Dataset runtime embedded in the exported graph."""
 from inspect import getsource
 
-from ..core import dataset_filters, dataset_rules, dataset_types
+from ..core import dataset_filters, dataset_formula, dataset_rules, dataset_types
 from ..schemas import dataset
 from .dataset_nodes import INPUTS
 
@@ -13,6 +13,7 @@ def python_standalone() -> str:
         getsource(dataset_types).split("from .errors import AppError\n", 1)[1],
         getsource(dataset_filters).split("from .dataset_types import COLUMN_KEY_PATTERN, FILTER_OPERATORS\n", 1)[1],
         getsource(dataset_rules).split("from .errors import AppError\n", 1)[1],
+        getsource(dataset_formula).split("CellValue, DatasetValue\n", 1)[1],
         "ColumnKey = Annotated[str, Field(pattern=COLUMN_KEY_PATTERN)]",
         f"DATASET_OPERATION_INPUTS = {operation_inputs!r}",
         "RowValues = Annotated[dict[ColumnKey, DatasetValue], Field(max_length=100)]",
@@ -28,8 +29,10 @@ IMPORTS = r'''
 # --- Standalone Dataset storage --------------------------------------------------------------------------------
 import json
 import math
+import operator
 import re
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -60,6 +63,7 @@ DATASET_ROWS = sa.Table("superstep_dataset_rows", DATASET_METADATA,
     sa.Column("dataset_id", sa.String(100), sa.ForeignKey(DATASET_DEFINITIONS.c.dataset_id), primary_key=True),
     sa.Column("id", sa.String(32), primary_key=True),
     sa.Column("values", sa.JSON().with_variant(JSONB(), "postgresql"), nullable=False),
+    sa.Column("formula_errors", sa.JSON(none_as_null=True)),
     sa.Column("revision", sa.Integer, nullable=False),
     sa.Column("created", sa.Float, nullable=False),
     sa.Column("updated", sa.Float, nullable=False),
@@ -143,13 +147,31 @@ def dataset_check_schema(connection, dataset_id: str, binding: str) -> None:
 
 def dataset_check_storage(connection, binding: str) -> None:
     inspector = sa.inspect(connection)
-    if not all(inspector.has_table(table.name) for table in DATASET_METADATA.sorted_tables) or not any(
-        column["name"] == "created" for column in inspector.get_columns(DATASET_RECEIPTS.name)
-    ):
+    if (not all(inspector.has_table(table.name) for table in DATASET_METADATA.sorted_tables)
+            or not any(column["name"] == "created" for column in inspector.get_columns(DATASET_RECEIPTS.name))
+            or not any(column["name"] == "formula_errors" for column in inspector.get_columns(DATASET_ROWS.name))):
         raise AppError("DATASET_SETUP_REQUIRED", binding=binding)
 
 
-def dataset_restore_snapshot(connection, dataset_id: str, binding: str) -> None:
+def dataset_formulas(columns: dict[str, dict]) -> dict[str, Formula]:
+    expressions = {}
+    for field, column in columns.items():
+        formula = column.get("formula")
+        if formula is not None:
+            if formula.get("version") != 1:
+                raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=field)
+            expressions[field] = formula["expression"]
+    try:
+        return compile_formulas({field: column["kind"] for field, column in columns.items()}, expressions)
+    except FormulaDefinitionError as exc:
+        raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", field=exc.column or "") from exc
+
+
+def dataset_read_only(column: dict) -> bool:
+    return column.get("formula") is not None or column["kind"] in READ_ONLY_KINDS
+
+
+def dataset_restore_snapshot(connection, dataset_id: str, binding: str, formulas: dict[str, Formula]) -> None:
     path = Path(__file__).with_name("dataset-snapshots.json")
     if not path.is_file():
         return
@@ -180,29 +202,33 @@ def dataset_restore_snapshot(connection, dataset_id: str, binding: str) -> None:
         if not isinstance(values, dict) or set(values) - set(columns):
             raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding)
         try:
-            stored = {field: dataset_normalize(column, values[field] if field in values else column["default"]) for field, column in columns.items() if column["kind"] not in SYSTEM_TIME_KINDS}
+            stored = {field: dataset_normalize(column, values.get(field, column["default"]))
+                      for field, column in columns.items()
+                      if field not in formulas and column["kind"] not in SYSTEM_TIME_KINDS}
         except AppError:
             raise AppError("DATASET_BINDING_SCHEMA_MISMATCH", binding=binding) from None
+        stored, errors = materialize_formulas(formulas, stored)
         if dataset_size(stored) > MAX_ROW_BYTES:
             raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
         now = dataset_now()
         created, updated = item.get("created", now), item.get("updated", now)
         if type(created) not in (int, float) or type(updated) not in (int, float):
             raise AppError("DATASET_SNAPSHOT_INVALID", binding=binding)
-        prepared.append((item["id"], stored, created, updated))
-    watermark = max((stored.get(field) or 0 for _, stored, _, _ in prepared
+        prepared.append((item["id"], stored, errors, created, updated))
+    watermark = max((stored.get(field) or 0 for _, stored, _, _, _ in prepared
                      for field, column in columns.items() if column["kind"] == "auto_number"), default=0)
     definitions = DATASET_DEFINITIONS
     connection.execute(definitions.update().where(definitions.c.dataset_id == dataset_id,
                                                    definitions.c.auto_number_counter < watermark)
                        .values(auto_number_counter=watermark))
-    for row_id, stored, created, updated in prepared:
+    for row_id, stored, errors, created, updated in prepared:
         if connection.scalar(sa.select(DATASET_ROWS.c.id).where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row_id)) is not None:
             continue
         count = connection.scalar(sa.select(sa.func.count()).select_from(DATASET_ROWS).where(DATASET_ROWS.c.dataset_id == dataset_id))
         if count >= MAX_DATASET_ROWS:
             raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
-        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=stored, revision=1, created=created, updated=updated))
+        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=stored,
+                                                        formula_errors=errors, revision=1, created=created, updated=updated))
         entries = [{"dataset_id": dataset_id, "field": field, "digest": key_digest(stored[field]), "row_id": row_id}
                    for field, column in columns.items() if column["unique"] and stored.get(field) is not None]
         if entries:
@@ -227,14 +253,17 @@ def setup_datasets(*, create: bool) -> None:
                     if not any(column["name"] == "auto_number_counter" for column in sa.inspect(connection).get_columns(DATASET_DEFINITIONS.name)):
                         connection.exec_driver_sql("ALTER TABLE superstep_dataset_definitions ADD COLUMN auto_number_counter BIGINT NOT NULL DEFAULT 0")
                     dataset_migrate_receipts(connection, backend == "postgresql")
+                    if not any(column["name"] == "formula_errors" for column in sa.inspect(connection).get_columns(DATASET_ROWS.name)):
+                        connection.exec_driver_sql("ALTER TABLE superstep_dataset_rows ADD COLUMN formula_errors JSON")
                     insert = postgres_insert if backend == "postgresql" else sqlite_insert
                     connection.execute(insert(DATASET_DEFINITIONS).values(dataset_id=dataset_id, contract=dataset_contract(binding))
                                        .on_conflict_do_nothing(index_elements=[DATASET_DEFINITIONS.c.dataset_id]))
                 else:
                     dataset_check_storage(connection, binding)
                 dataset_check_schema(connection, dataset_id, binding)
+                formulas = dataset_formulas(dataset_contract(binding)["columns"])
                 if create:
-                    dataset_restore_snapshot(connection, dataset_id, binding)
+                    dataset_restore_snapshot(connection, dataset_id, binding, formulas)
         except sa.exc.SQLAlchemyError:
             raise AppError("DATASET_STORAGE_ERROR", binding=binding) from None
         finally:
@@ -293,7 +322,9 @@ def dataset_row_payload(row, fields: list[str], columns: dict) -> dict:
         kind = columns[field]["kind"]
         stamp = row.created if kind == "created_time" else row.updated
         values[field] = dataset_timestamp(stamp) if kind in SYSTEM_TIME_KINDS else row["values"].get(field)
-    return {"id": row.id, "revision": row.revision, "created": row.created, "updated": row.updated, "values": values}
+    errors = {field: reason for field, reason in (row.formula_errors or {}).items() if field in values}
+    return {"id": row.id, "revision": row.revision, "created": row.created, "updated": row.updated,
+            "values": values, **({"formula_errors": errors} if errors else {})}
 
 
 def dataset_expression(column: dict, postgres: bool):
@@ -466,7 +497,7 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
     schema = DatasetRowUpsert if operation == "upsert_row" else DatasetRowIn
     request = schema.model_validate(arguments)
     for field in request.values:
-        if dataset_column(columns, field)["kind"] in READ_ONLY_KINDS:
+        if dataset_read_only(dataset_column(columns, field)):
             raise AppError("DATASET_COLUMN_READ_ONLY", field=field)
     incoming = {key: dataset_normalize(dataset_column(columns, key), value) for key, value in request.values.items()}
     key = request.key if operation == "upsert_row" else None
@@ -497,7 +528,7 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
         if count >= MAX_DATASET_ROWS:
             raise AppError("DATASET_ROW_LIMIT", max=MAX_DATASET_ROWS)
         values = {field: incoming[field] if field in incoming else dataset_normalize(column, column["default"])
-                  for field, column in columns.items() if column["kind"] not in READ_ONLY_KINDS}
+                  for field, column in columns.items() if not dataset_read_only(column)}
         definitions = DATASET_DEFINITIONS
         auto_columns = [field for field, column in columns.items() if column["kind"] == "auto_number"]
         if auto_columns:
@@ -507,19 +538,22 @@ def dataset_write(connection, query, dataset_id: str, columns: dict, operation: 
             values.update(dict.fromkeys(auto_columns, number))
     else:
         values = {**row["values"], **incoming}
+    values, errors = materialize_formulas(dataset_formulas(columns), values)
     if dataset_size(values) > MAX_ROW_BYTES:
         raise AppError("DATASET_ROW_TOO_LARGE", max=MAX_ROW_BYTES)
     now = dataset_now()
     row_id = row.id if row is not None else uuid.uuid4().hex
+    changed = row is None or values != row["values"] or errors != row.formula_errors
     if row is None:
-        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=values, revision=1, created=now, updated=now))
-    elif values != row["values"]:
+        connection.execute(DATASET_ROWS.insert().values(dataset_id=dataset_id, id=row_id, values=values,
+                                                        formula_errors=errors, revision=1, created=now, updated=now))
+    elif changed:
         connection.execute(DATASET_ROWS.update().where(DATASET_ROWS.c.dataset_id == dataset_id, DATASET_ROWS.c.id == row_id)
-                           .values(values=values, revision=row.revision + 1, updated=now))
+                           .values(values=values, formula_errors=errors, revision=row.revision + 1, updated=now))
         connection.execute(keys.delete().where(keys.c.dataset_id == dataset_id, keys.c.row_id == row_id))
     entries = [{"dataset_id": dataset_id, "field": field, "digest": key_digest(values[field]), "row_id": row_id}
                for field, column in columns.items() if column["unique"] and values.get(field) is not None]
-    if entries and (row is None or values != row["values"]):
+    if entries and changed:
         try:
             connection.execute(keys.insert(), entries)
         except sa.exc.IntegrityError:

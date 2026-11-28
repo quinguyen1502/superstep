@@ -187,6 +187,15 @@ def to_project(language: str, code: str, title: str, datasets: dict | None = Non
             "The generated graph reads each backend from the environment, so the same export can switch backends without being regenerated. "
             "Dataset writes affect the configured destination. Use a separate dataset when running examples.\n"
         )
+        files["README.md"] += (
+            "\nRun `--setup-datasets` again after upgrading a standalone export so it can initialize any new storage columns. "
+            "Setup preserves existing rows and checks the binding schema.\n"
+        )
+        if any(column.get("formula") for binding in datasets["bindings"] for column in binding["columns"]):
+            files["README.md"] += (
+                "\nFormula results are read-only. Map writes to the input columns. A connected target must match the exported "
+                "Formula definitions. Standalone setup recomputes Formula results for newly imported snapshot rows.\n"
+            )
         if snapshots:
             files["dataset-snapshots.json"] = json.dumps(snapshots, ensure_ascii=False, indent=2) + "\n"
             files["README.md"] += (

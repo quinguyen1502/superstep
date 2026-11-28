@@ -7,6 +7,8 @@ import subprocess
 
 import pytest
 
+from app.models.database import make_engine
+
 from test_dataset_connected import dataset, token
 from test_dataset_rows import call as rows_call
 from test_dataset_project_export import project, target, workflow  # noqa: F401
@@ -146,7 +148,16 @@ def test_typescript_standalone_runs_generated_project_and_replays_receipts(clien
     run = run_deno(deno_env, folder, script)
     assert run.returncode == 0, run.stderr
     assert "FromExport" in run.stdout and '"dataset"' in run.stdout
-    assert run_deno(deno_env, folder, script, "--setup-datasets").returncode == 0
+    database = db.engine if settings["BACKEND"] == "postgresql" else make_engine(f'sqlite:///{settings["SQLITE_PATH"]}')
+    with database.begin() as connection:
+        connection.exec_driver_sql("ALTER TABLE superstep_dataset_rows DROP COLUMN formula_errors")
+    if database is not db.engine:
+        database.dispose()
+    legacy = probe(deno_env, folder, "query")
+    assert legacy.returncode and "DATASET_SETUP_REQUIRED" in legacy.stderr
+    for _ in range(2):
+        upgraded = run_deno(deno_env, folder, script, "--setup-datasets")
+        assert upgraded.returncode == 0, upgraded.stderr
 
     queried = probe(deno_env, folder, "query")
     assert queried.returncode == 0, queried.stderr

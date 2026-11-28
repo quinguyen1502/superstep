@@ -20,13 +20,13 @@ const DATASET_COLUMN_KEY = /^[a-z][a-z0-9_]{0,62}$/;
 const DATASET_DATE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
 const DATASET_DATETIME = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]{1,3})?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])$/;
 const DATASET_EMAIL = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
-const DATASET_INVALID_TEXT = /[\u0000\ud800-\udfff]/;
+const DATASET_INVALID_TEXT = /[\u0000\ud800-\udfff]/u;
 const DATASET_TEXT_KINDS = new Set(["text", "long_text", "url", "email", "select"]);
 const DATASET_TIME_KINDS = new Set(["created_time", "updated_time"]);
 const DATASET_READ_ONLY = new Set([...DATASET_TIME_KINDS, "auto_number"]);
 
 const DATASET_MAX_TEXT = 16384;
-const DATASET_MAX_SAFE_INTEGER = (1 << 53) - 1;
+const DATASET_MAX_SAFE_INTEGER = Number.MAX_SAFE_INTEGER;
 const DATASET_MAX_ROW_BYTES = 65536;
 const DATASET_MAX_PAGE_BYTES = 1048576;
 const DATASET_MAX_ROWS = 25000;
@@ -39,7 +39,23 @@ interface DatasetColumn {
   unique: boolean;
   default: unknown;
   options: string[];
+  formula?: DatasetFormulaDefinition;
   validation_rules?: { min_length?: number; max_length?: number; min?: number | string; max?: number | string; integer?: boolean; domains?: string[] };
+}
+
+interface DatasetFormulaDefinition { version: number; expression: string; }
+type DatasetFormulaValue = string | number | boolean | null;
+interface DatasetFormulaExpression {
+  op: string;
+  kind: "number" | "text" | "boolean";
+  args: DatasetFormulaExpression[];
+  value: DatasetFormulaValue;
+}
+
+interface DatasetFormula {
+  key: string;
+  definition: DatasetFormulaDefinition;
+  expression: DatasetFormulaExpression;
 }
 
 interface DatasetFilter {
@@ -157,6 +173,98 @@ function datasetContract(binding: string): { version: number; columns: Record<st
     columns[column.key] = { ...column, options: [...(column.options ?? [])].sort() };
   }
   return { version: 1, columns };
+}
+
+function datasetFormulaProgram(binding: string, columns: Record<string, DatasetColumn>): DatasetFormula[] {
+  const programs = DATASET_FORMULAS[binding] ?? [];
+  const computed = Object.values(columns).filter(column => column.formula != null);
+  if (programs.length !== computed.length || programs.some(program => {
+    const formula = columns[program.key]?.formula;
+    return formula?.version !== 1 || formula.expression !== program.definition.expression;
+  })) {
+    datasetFail("DATASET_BINDING_SCHEMA_MISMATCH", { binding });
+  }
+  return programs;
+}
+
+class DatasetFormulaCellError extends Error {}
+
+function formulaNumber(value: unknown): number {
+  if (typeof value !== "number") throw new DatasetFormulaCellError("invalid_input");
+  if (!Number.isFinite(value) || Math.abs(value) > DATASET_MAX_SAFE_INTEGER) {
+    throw new DatasetFormulaCellError("numeric_range");
+  }
+  return value === 0 ? 0 : value;
+}
+
+function formulaText(value: unknown): string {
+  if (typeof value !== "string" || DATASET_INVALID_TEXT.test(value)) {
+    throw new DatasetFormulaCellError("invalid_input");
+  }
+  if ([...value].length > DATASET_MAX_TEXT) throw new DatasetFormulaCellError("text_length");
+  return value;
+}
+
+function evaluateDatasetFormula(node: DatasetFormulaExpression, values: Record<string, unknown>,
+  errors: Record<string, string>): DatasetFormulaValue {
+  if (node.op === "literal") return node.value;
+  if (node.op === "field") {
+    const key = node.value as string;
+    if (Object.hasOwn(errors, key)) throw new DatasetFormulaCellError("dependency");
+    const value = Object.hasOwn(values, key) ? values[key] : null;
+    if (value == null) return null;
+    if (node.kind === "number") return formulaNumber(value);
+    if (node.kind === "text") return formulaText(value);
+    if (typeof value === "boolean") return value;
+    throw new DatasetFormulaCellError("invalid_input");
+  }
+
+  const left = evaluateDatasetFormula(node.args[0], values, errors);
+  if (node.op === "if") {
+    return left === null ? null : evaluateDatasetFormula(node.args[left ? 1 : 2], values, errors);
+  }
+  if (node.op === "positive" || node.op === "negative") {
+    return left === null ? null : formulaNumber(node.op === "positive" ? left : -(left as number));
+  }
+  const right = evaluateDatasetFormula(node.args[1], values, errors);
+  if (left === null || right === null) return null;
+  if (node.op === "==") return left === right;
+  if (node.op === "!=") return left !== right;
+  if (node.op === "&") return formulaText((left as string) + (right as string));
+
+  const a = left as number;
+  const b = right as number;
+  switch (node.op) {
+    case "<": return a < b;
+    case "<=": return a <= b;
+    case ">": return a > b;
+    case ">=": return a >= b;
+    case "+": return formulaNumber(a + b);
+    case "-": return formulaNumber(a - b);
+    case "*": return formulaNumber(a * b);
+    case "/":
+      if (b === 0) throw new DatasetFormulaCellError("division_by_zero");
+      return formulaNumber(a / b);
+    default: throw new Error("Invalid compiled Dataset Formula");
+  }
+}
+
+function materializeDatasetFormulas(programs: DatasetFormula[], values: Record<string, unknown>): Record<string, string> | null {
+  const errors: Record<string, string> = {};
+  for (const program of programs) {
+    try {
+      values[program.key] = evaluateDatasetFormula(program.expression, values, errors);
+    } catch (error) {
+      if (!(error instanceof DatasetFormulaCellError)) throw error;
+      values[program.key] = null;
+      errors[program.key] = error.message;
+    }
+  }
+  return Object.keys(errors).length ? errors : null;
+}
+
+function datasetReadOnly(column: DatasetColumn): boolean {
+  return column.formula != null || DATASET_READ_ONLY.has(column.kind);
 }
 
 function datasetBackend(binding: string): string {
@@ -296,6 +404,7 @@ const DATASET_DDL = [
     dataset_id VARCHAR(100) NOT NULL REFERENCES superstep_dataset_definitions (dataset_id),
     id VARCHAR(32) NOT NULL,
     "values" TEXT NOT NULL,
+    formula_errors JSON,
     revision INTEGER NOT NULL,
     created DOUBLE PRECISION NOT NULL,
     updated DOUBLE PRECISION NOT NULL,
@@ -318,6 +427,8 @@ const DATASET_DDL = [
     PRIMARY KEY (dataset_id, operation_id))`,
 ];
 
+const DATASET_ROW_SELECT = 'SELECT id, "values" AS payload, formula_errors, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ?';
+
 function storedJson(value: unknown, binding: string): Record<string, unknown> {
   if (typeof value === "string") {
     try { return JSON.parse(value) as Record<string, unknown>; }
@@ -330,7 +441,7 @@ function storedJson(value: unknown, binding: string): Record<string, unknown> {
 async function datasetStorageReady(connection: SqlConnection, binding: string): Promise<void> {
   try {
     await connection.get('SELECT dataset_id FROM superstep_dataset_definitions LIMIT 1');
-    await connection.get('SELECT dataset_id FROM superstep_dataset_rows LIMIT 1');
+    await connection.get('SELECT formula_errors FROM superstep_dataset_rows LIMIT 1');
     await connection.get('SELECT dataset_id FROM superstep_dataset_keys LIMIT 1');
     await connection.get('SELECT created FROM superstep_dataset_receipts LIMIT 1');
   } catch {
@@ -381,7 +492,8 @@ async function datasetSchemasMatch(connection: SqlConnection, datasetIdValue: st
   }
 }
 
-async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue: string, binding: string): Promise<void> {
+async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue: string, binding: string,
+  columns: Record<string, DatasetColumn>, programs: DatasetFormula[]): Promise<void> {
   const path = resolve(dirname(fileURLToPath(import.meta.url)), "dataset-snapshots.json");
   if (!existsSync(path)) return;
   let document: { snapshots?: unknown };
@@ -396,8 +508,8 @@ async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue:
   }
   if (!Array.isArray(chosen.rows)) datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
   if (chosen.rows.length > DATASET_MAX_SNAPSHOT_ROWS) datasetFail("DATASET_SNAPSHOT_TOO_LARGE", { max: DATASET_MAX_SNAPSHOT_ROWS });
-  const columns = contract.columns;
-  const prepared: { id: string; values: Record<string, unknown>; created: number; updated: number }[] = [];
+  const prepared: { id: string; values: Record<string, unknown>; errors: Record<string, string> | null;
+    created: number; updated: number }[] = [];
   for (const item of chosen.rows) {
     if (!plainObject(item) || typeof item.id !== "string" || !/^[a-f0-9]{32}$/.test(item.id) || !plainObject(item.values)) {
       datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
@@ -406,19 +518,20 @@ async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue:
     const stored: Record<string, unknown> = {};
     try {
       for (const [field, column] of Object.entries(columns)) {
-        if (DATASET_TIME_KINDS.has(column.kind)) continue;
+        if (column.formula != null || DATASET_TIME_KINDS.has(column.kind)) continue;
         stored[field] = datasetNormalize(column, Object.hasOwn(item.values, field) ? item.values[field] : column.default, column.required);
       }
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("DATASET_")) datasetFail("DATASET_BINDING_SCHEMA_MISMATCH", { binding });
       throw error;
     }
+    const errors = materializeDatasetFormulas(programs, stored);
     if (datasetSize(stored) > DATASET_MAX_ROW_BYTES) datasetFail("DATASET_ROW_TOO_LARGE", { max: DATASET_MAX_ROW_BYTES });
     const now = Date.now() / 1000;
     const created = item.created ?? now;
     const updated = item.updated ?? now;
     if (typeof created !== "number" || typeof updated !== "number") datasetFail("DATASET_SNAPSHOT_INVALID", { binding });
-    prepared.push({ id: item.id, values: stored, created, updated });
+    prepared.push({ id: item.id, values: stored, errors, created, updated });
   }
   const auto = Object.values(columns).filter(column => column.kind === "auto_number");
   const watermark = Math.max(0, ...prepared.flatMap(row => auto.map(column => Number(row.values[column.key] ?? 0))));
@@ -432,8 +545,8 @@ async function datasetRestoreSnapshot(connection: SqlConnection, datasetIdValue:
     const count = Number((await connection.get("SELECT COUNT(*) AS n FROM superstep_dataset_rows WHERE dataset_id = ?", [datasetIdValue]))?.n ?? 0);
     if (count >= DATASET_MAX_ROWS) datasetFail("DATASET_ROW_LIMIT", { max: DATASET_MAX_ROWS });
     await connection.run(
-      'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", revision, created, updated) VALUES (?, ?, ?, ?, ?, ?)',
-      [datasetIdValue, row.id, datasetJson(row.values, false), 1, row.created, row.updated],
+      'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", formula_errors, revision, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [datasetIdValue, row.id, datasetJson(row.values, false), row.errors && datasetJson(row.errors, false), 1, row.created, row.updated],
     );
     for (const [field, column] of Object.entries(columns)) {
       if (!column.unique || row.values[field] === null || row.values[field] === undefined) continue;
@@ -454,6 +567,8 @@ export async function setupDatasets(create: boolean): Promise<void> {
   for (const binding of Object.keys(DATASET_BINDINGS)) {
     const backend = datasetBackend(binding);
     if (backend === "superstep") continue;
+    const { columns } = datasetContract(binding);
+    const programs = datasetFormulaProgram(binding, columns);
     const [connection, datasetIdValue] = await openDataset(binding, backend, create);
     try {
       await connection.transaction(create && backend === "sqlite", datasetIdValue, async () => {
@@ -465,6 +580,11 @@ export async function setupDatasets(create: boolean): Promise<void> {
             await connection.exec("ALTER TABLE superstep_dataset_definitions ADD COLUMN auto_number_counter BIGINT NOT NULL DEFAULT 0");
           }
           await datasetMigrateReceipts(connection, backend, binding);
+          if (backend === "postgresql") {
+            await connection.exec("ALTER TABLE superstep_dataset_rows ADD COLUMN IF NOT EXISTS formula_errors JSON");
+          } else if (!(await connection.all("PRAGMA table_info(superstep_dataset_rows)")).some(column => column.name === "formula_errors")) {
+            await connection.exec("ALTER TABLE superstep_dataset_rows ADD COLUMN formula_errors JSON");
+          }
           await connection.run(
             `INSERT INTO superstep_dataset_definitions (dataset_id, contract) VALUES (?, ?)
              ON CONFLICT (dataset_id) DO NOTHING`,
@@ -474,7 +594,7 @@ export async function setupDatasets(create: boolean): Promise<void> {
           await datasetStorageReady(connection, binding);
         }
         await datasetSchemasMatch(connection, datasetIdValue, binding);
-        if (create) await datasetRestoreSnapshot(connection, datasetIdValue, binding);
+        if (create) await datasetRestoreSnapshot(connection, datasetIdValue, binding, columns, programs);
       });
     } catch (error) {
       if (error instanceof Error && error.message.startsWith("DATASET_")) throw error;
@@ -590,12 +710,15 @@ function datasetRow(row: SqlRow, fields: string[], binding: string): Record<stri
   const projected: Record<string, unknown> = {};
   const columns = datasetContract(binding).columns;
   for (const field of fields) projected[field] = rowValue(row, values, columns[field]);
+  const diagnostics = row.formula_errors == null ? {} : storedJson(row.formula_errors, binding);
+  const errors = Object.fromEntries(fields.filter(field => Object.hasOwn(diagnostics, field)).map(field => [field, diagnostics[field]]));
   return {
     id: String(row.id),
     revision: Number(row.revision),
     created: Number(row.created),
     updated: Number(row.updated),
     values: projected,
+    ...(Object.keys(errors).length ? { formula_errors: errors } : {}),
   };
 }
 
@@ -724,7 +847,7 @@ function rowMatches(row: SqlRow, query: DatasetQuery, columns: Record<string, Da
 
 async function matchingRows(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, query: DatasetQuery, binding: string) {
   const rows = await connection.all(
-    'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ?',
+    DATASET_ROW_SELECT,
     [datasetIdValue],
   );
   const keyHits = new Map<string, Set<string>>();
@@ -840,7 +963,9 @@ function isUniqueViolation(error: unknown): boolean {
   return code === "23505" || /UNIQUE constraint failed|duplicate key value/i.test(message);
 }
 
-async function datasetWrite(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>, operation: string, fields: string[], argumentsValue: Record<string, unknown>, operationId: string, binding: string): Promise<Record<string, unknown>> {
+async function datasetWrite(connection: SqlConnection, datasetIdValue: string, columns: Record<string, DatasetColumn>,
+  operation: string, fields: string[], argumentsValue: Record<string, unknown>, operationId: string, binding: string,
+  programs: DatasetFormula[]): Promise<Record<string, unknown>> {
   if (!/^[A-Za-z0-9_.:-]{1,128}$/.test(operationId)) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
   const allowed = operation === "upsert_row" ? ["values", "key"] : ["values"];
   if (Object.keys(argumentsValue).some((key) => !allowed.includes(key)) || !plainObject(argumentsValue.values)) {
@@ -850,7 +975,7 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
   const incoming: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(argumentsValue.values)) {
     const column = datasetColumn(columns, key);
-    if (DATASET_READ_ONLY.has(column.kind)) datasetFail("DATASET_COLUMN_READ_ONLY", { field: key });
+    if (datasetReadOnly(column)) datasetFail("DATASET_COLUMN_READ_ONLY", { field: key });
     incoming[key] = datasetNormalize(column, value, column.required);
   }
   const key = operation === "upsert_row" ? argumentsValue.key : null;
@@ -872,7 +997,7 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
     if (previous.fingerprint !== fingerprint) datasetFail("DATASET_RECEIPT_CONFLICT");
     const result = storedJson(previous.result, binding);
     const current = await connection.get(
-      'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?',
+      DATASET_ROW_SELECT + " AND id = ?",
       [datasetIdValue, result.row_id],
     );
     const row = current && fields.length ? datasetRow(current, fields, binding)
@@ -887,7 +1012,7 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
     );
     if (hit) {
       existing = await connection.get(
-        'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?',
+        DATASET_ROW_SELECT + " AND id = ?",
         [datasetIdValue, hit.row_id],
       );
     }
@@ -906,26 +1031,30 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
       for (const column of autoColumns) rowValues[column.key] = Number(counter?.auto_number_counter);
     }
     for (const [field, column] of Object.entries(columns)) {
-      if (!DATASET_READ_ONLY.has(column.kind)) {
+      if (!datasetReadOnly(column)) {
         rowValues[field] = Object.hasOwn(incoming, field) ? incoming[field] : datasetNormalize(column, column.default, column.required);
       }
     }
   } else {
     rowValues = { ...storedJson(existing.payload, binding), ...incoming };
   }
+  const errors = materializeDatasetFormulas(programs, rowValues);
+  const storedErrors = errors && datasetJson(errors, true);
   if (datasetSize(rowValues) > DATASET_MAX_ROW_BYTES) datasetFail("DATASET_ROW_TOO_LARGE", { max: DATASET_MAX_ROW_BYTES });
   const now = Date.now() / 1000;
   const rowId = existing ? String(existing.id) : crypto.randomUUID().replace(/-/g, "");
-  const changed = !existing || datasetJson(rowValues, true) !== datasetJson(storedJson(existing.payload, binding), true);
+  const previousErrors = existing?.formula_errors == null ? null : datasetJson(storedJson(existing.formula_errors, binding), true);
+  const changed = !existing || storedErrors !== previousErrors
+    || datasetJson(rowValues, true) !== datasetJson(storedJson(existing.payload, binding), true);
   if (!existing) {
     await connection.run(
-      'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", revision, created, updated) VALUES (?, ?, ?, ?, ?, ?)',
-      [datasetIdValue, rowId, datasetJson(rowValues, false), 1, now, now],
+      'INSERT INTO superstep_dataset_rows (dataset_id, id, "values", formula_errors, revision, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [datasetIdValue, rowId, datasetJson(rowValues, false), storedErrors, 1, now, now],
     );
   } else if (changed) {
     await connection.run(
-      'UPDATE superstep_dataset_rows SET "values" = ?, revision = ?, updated = ? WHERE dataset_id = ? AND id = ?',
-      [datasetJson(rowValues, false), Number(existing.revision) + 1, now, datasetIdValue, rowId],
+      'UPDATE superstep_dataset_rows SET "values" = ?, formula_errors = ?, revision = ?, updated = ? WHERE dataset_id = ? AND id = ?',
+      [datasetJson(rowValues, false), storedErrors, Number(existing.revision) + 1, now, datasetIdValue, rowId],
     );
     await connection.run("DELETE FROM superstep_dataset_keys WHERE dataset_id = ? AND row_id = ?", [datasetIdValue, rowId]);
   }
@@ -942,7 +1071,7 @@ async function datasetWrite(connection: SqlConnection, datasetIdValue: string, c
     }
   }
   const stored = await connection.get(
-    'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?',
+    DATASET_ROW_SELECT + " AND id = ?",
     [datasetIdValue, rowId],
   );
   if (!stored) datasetFail("DATASET_STORAGE_ERROR", { binding });
@@ -1009,7 +1138,8 @@ async function datasetDelete(connection: SqlConnection, datasetIdValue: string, 
 }
 
 async function datasetStandalone(binding: string, backend: string, operation: string, fields: string[], argumentsValue: Record<string, unknown>, operationId?: string): Promise<Record<string, unknown>> {
-  const columns = datasetContract(binding).columns;
+  const { columns } = datasetContract(binding);
+  const programs = datasetFormulaProgram(binding, columns);
   const allowed = DATASET_OPERATION_INPUTS[operation];
   if (!allowed || !plainObject(argumentsValue) || Object.keys(argumentsValue).some((key) => !allowed.includes(key)) || (!fields.length && operation !== "insert_row" && operation !== "upsert_row") || new Set(fields).size !== fields.length) {
     datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
@@ -1028,7 +1158,7 @@ async function datasetStandalone(binding: string, backend: string, operation: st
       if (write) {
         if (operationId === undefined) datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
         if (operation === "delete_row") return datasetDelete(connection, datasetIdValue, columns, fields, argumentsValue, operationId, binding);
-        return datasetWrite(connection, datasetIdValue, columns, operation, fields, argumentsValue, operationId, binding);
+        return datasetWrite(connection, datasetIdValue, columns, operation, fields, argumentsValue, operationId, binding, programs);
       }
       if (operation === "aggregate_rows") return datasetAggregate(connection, datasetIdValue, columns, fields, argumentsValue, binding);
       if (operation === "find_rows") return datasetFind(connection, datasetIdValue, columns, fields, argumentsValue, binding);
@@ -1038,7 +1168,7 @@ async function datasetStandalone(binding: string, backend: string, operation: st
           datasetFail("DATASET_NODE_ARGUMENTS_INVALID");
         }
         const row = await connection.get(
-          'SELECT id, "values" AS payload, revision, created, updated FROM superstep_dataset_rows WHERE dataset_id = ? AND id = ?',
+          DATASET_ROW_SELECT + " AND id = ?",
           [datasetIdValue, rowId],
         );
         if (!row) datasetFail("DATASET_ROW_NOT_FOUND");

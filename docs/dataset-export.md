@@ -123,12 +123,33 @@ PostgreSQL. The connected contract checks the rules against the
 server schema. Running `--setup-datasets` also upgrades existing standalone
 storage with the auto-number watermark.
 
-### Formula storage preview
+### Formula columns
 
-Formula configuration is off by default while standalone export support is in development. Enable `STUDIO_ENABLE_DATASET_FORMULAS=1` in an isolated test environment to add or edit Formula expressions in the Studio Schema tab or through the schema API. Existing formulas still recalculate when input rows change after this setting is turned off.
+Enable `STUDIO_ENABLE_DATASET_FORMULAS=1` to add or edit Formula expressions
+in Studio or through the schema API. Existing formulas recalculate when inputs
+change, including when the configuration flag is disabled.
 
-A Formula column uses its scalar result kind and optional `formula` metadata with `version: 1` and `expression`. Its result is read-only in all writers. CSV export includes computed values and CSV import skips those columns. Authorized row reads can include a `formula_errors` object keyed by projected column if a calculation returns null with an error. A missing input can also yield null, with no entry in that object. Writes under a write-only grant continue to return identifiers only. A connected request that references a Formula field includes its definition in `columns`. Test writes calculate with the available input and leave stored values and generated numbers untouched.
+The binding contract records each Formula column's scalar result kind and
+`formula` metadata with `version: 1` and `expression`. Dataset nodes and Agent
+tools can select, filter and aggregate those results using their existing grants.
+Formula columns are read-only. Use the input fields for insert and upsert.
+A connected target must have compatible definitions, including the Formula
+expression and its input columns from the export. Re-export after changing a
+definition before switching to the updated target.
 
-Project export currently rejects a binding whose dataset contains Formula fields. Existing projects on regular datasets can use the same connected and standalone contracts.
+Both standalone runtimes compute the result in the write transaction. Snapshot
+setup also computes the result from the saved inputs. Repeating setup does not
+change existing rows. A missing input can yield null. A calculation error
+also yields null and appears in `formula_errors` when the affected field is part
+of the row projection. Write-only responses contain identifiers.
 
-The migration adds two nullable metadata columns. Existing datasets without Formula fields can be downgraded to the preceding schema. An active Formula definition blocks the downgrade. Before enabling the preview, take a backup. To move back to a version that cannot recalculate formulas, freeze writes, retain a copy of the Formula definitions and results, and restore the pre-enable backup or explicitly remove the Formula columns before downgrading.
+After upgrading an existing standalone export, run its `--setup-datasets`
+command to add the nullable diagnostic column. Existing regular bindings,
+rows and receipts are preserved. If a binding's Formula definition changes,
+setup reports a schema mismatch. Use a new standalone Dataset ID and import
+data with a compatible snapshot or populate it through the new binding.
+
+For a Studio server rollback, freeze writes to affected datasets and back up
+the database. Active Formula definitions block downgrade to a schema without
+Formula support. Retain the definitions and results, then restore a pre-Formula
+backup or remove the Formula columns before downgrading.

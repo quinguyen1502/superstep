@@ -41,6 +41,8 @@ RESERVED = set(dir(builtins)) | set(keyword.kwlist) | set(keyword.softkwlist) | 
     "dataset_check_schema", "dataset_check_storage", "dataset_column", "dataset_normalize", "dataset_row_payload",
     "dataset_expression", "dataset_contains", "dataset_filter", "dataset_find", "dataset_write", "dataset_standalone",
     "setup_datasets", "normalize_cell", "filter_operators", "key_digest", "write_fingerprint", "dataset_size",
+    "dataset_formulas", "dataset_read_only", "compile_formulas", "evaluate_formulas", "materialize_formulas",
+    "operator", "dataclass",
     "sa", "math", "date", "datetime", "timezone", "sha256", "dataset_now", "postgres_insert", "sqlite_insert",
     "uuid", "RunnableConfig", "AppError",
     "VAR_RE", "FILTER_RE", "FILTERS", "render", "render_args", "LLM_PROVIDER", "DECISION_MODEL", "mock_llm",

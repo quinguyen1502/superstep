@@ -203,8 +203,9 @@ class DatasetRowService:
         return {"total": result["total"], "values": result["values"], "schema_revision": dataset.revision}
 
     def aggregate(self, uid: str, dataset_id: str, *, filters: list[dict], filter_tree: dict | None,
-                  filter_mode: str, search: str | None, summaries: dict[str, str], group_by: str | None) -> dict:
-        dataset = self._read_definition(uid, dataset_id, None)
+                  filter_mode: str, search: str | None, summaries: dict[str, str], group_by: str | None,
+                  schema_revision: int | None = None) -> dict:
+        dataset = self._read_definition(uid, dataset_id, schema_revision)
         columns = _active_columns(dataset)
         predicates, search_columns = _query_predicates(columns, filters, filter_tree, search)
         rows = self.rows.summarize(dataset.id, filters=predicates, filter_mode=filter_mode, search=search,
