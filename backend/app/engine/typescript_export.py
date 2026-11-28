@@ -53,7 +53,7 @@ GLOBALS = {
     "URLSearchParams", "performance"}
 HELPERS = {
     "datasetCall", "datasetAgent", "datasetOperationId", "setupDatasets", "datasetStandalone", "datasetBackend",
-    "datasetCliArgs", "DATASET_BINDINGS",
+    "datasetCliArgs", "DATASET_BINDINGS", "DATASET_FORMULAS",
     "Annotation", "StateGraph", "START", "END", "Command", "interrupt", "MemorySaver", "InMemoryCache", "State", "Update",
     "env", "VAR_RE", "FILTER_RE", "ONE_VAR_RE", "FILTERS", "text", "value", "render", "renderArgs", "LLM_PROVIDER", "callLlmFallback", "failsOver", "offlineService", "httpRequest", "blockedAddress", "concatBytes", "HTTP_RUN_ID",
     "DECISION_MODEL", "mockLlm", "callLlm", "resolveModel", "norm", "escapeRe", "pickBranch", "decide", "retrieve", "callMcpTool", "MCP_PROTOCOL", "managedOperation",
@@ -965,6 +965,7 @@ class _Writer(GraphWriter):
         if "dataset" in self.uses:
             self.add("export const DATASET_BINDINGS: Record<string, { columns: unknown[]; name: string; operations: string[] }> = " + lit(self.datasets.bindings) + ";")
             self.add(TS_DATASET.rstrip())
+            self.add("const DATASET_FORMULAS: Record<string, DatasetFormula[]> = " + lit(self.datasets.formula_programs()) + ";")
             self.add(typescript_standalone().rstrip())
         if "agent" in self.uses: self.add(AGENT.rstrip())
         if "handoff" in self.uses: self.add(HANDOFF.rstrip() + f"\nconst MAX_HANDOFFS = {self.max_handoffs(main.raw)};")

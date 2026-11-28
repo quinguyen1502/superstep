@@ -87,7 +87,7 @@ class DatasetConnectedService:
         if operation == "find_rows":
             result = self.rows.query(uid, dataset_id, schema_revision=dataset.revision, **query.model_dump())
         elif operation == "aggregate_rows":
-            result = self.rows.aggregate(uid, dataset_id, **query.model_dump())
+            result = self.rows.aggregate(uid, dataset_id, schema_revision=dataset.revision, **query.model_dump())
         else:
             row_id = arguments["row_id"]
             if len(row_id) > 100:

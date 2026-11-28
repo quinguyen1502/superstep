@@ -151,7 +151,7 @@ def test_formula_batch_undo_csv_and_auto_number(client, enabled):
     assert values == {"A": 3, "B": 8}
 
 
-def test_formula_connected_receipts_scope_workflow_and_export_gate(client, enabled):
+def test_formula_connected_receipts_scope_workflow_and_export_contract(client, enabled):
     data, base = make_dataset(client, [*BASE_COLUMNS, formula("cost", "[rate] / [hours]")], team_id=None)
     contract = [{key: value for key, value in definition.items() if key != "label"} for definition in data["columns"]]
     writer = token(client, base, "write")["token"]
@@ -198,9 +198,12 @@ def test_formula_connected_receipts_scope_workflow_and_export_gate(client, enabl
     grant(client, data["id"], wid, "read_write")
     computed = final(run(client, {"workflow_id": wid}))["row"]
     assert computed["values"] == {"cost": 10} and "formula_errors" not in computed
-    with pytest.raises(AppError) as unsupported:
-        dataset_export.prepare([workflow], lambda _: data["columns"], phase3=True)
-    assert unsupported.value.code == "DATASET_EXPORT_COLUMN_KIND_UNSUPPORTED"
+    exported = dataset_export.prepare([workflow], lambda _: data["columns"], phase3=True)
+    cost = next(column for column in exported.bindings["DATASET_1"]["columns"] if column["key"] == "cost")
+    assert cost["formula"] == {"version": 1, "expression": "[rate] / [hours]"}
+    with pytest.raises(AppError) as read_only:
+        dataset_export.prepare([forbidden], lambda _: data["columns"], phase3=True)
+    assert read_only.value.code == "DATASET_COLUMN_READ_ONLY"
 
 
 def test_formula_schema_definition_and_row_write_serialize(client, enabled):

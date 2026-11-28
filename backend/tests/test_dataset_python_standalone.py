@@ -4,6 +4,7 @@ import os
 import runpy
 import subprocess
 import sys
+from types import ModuleType
 import uuid
 
 import pytest
@@ -288,26 +289,40 @@ def test_standalone_setup_migrates_old_receipts_and_expires_them(db, monkeypatch
     from app.engine.dataset_python_standalone import python_standalone
 
     settings = configure(monkeypatch, db, tmp_path)
-    namespace = {"__file__": str(tmp_path / "agent.py"), "os": os, "uuid": uuid, "DATASET_BINDINGS": {
+    module = ModuleType("standalone_upgrade_test")
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    namespace = vars(module)
+    namespace.update({"__file__": str(tmp_path / "agent.py"), "os": os, "uuid": uuid, "DATASET_BINDINGS": {
         "DATASET_1": {"columns": [{"key": "ticket", "kind": "text", "required": True,
                                     "unique": True, "default": None, "options": []}]},
-    }}
-    exec(python_standalone(), namespace)
+    }})
+    exec("from __future__ import annotations\n" + python_standalone(), namespace)
     engine, did = namespace["dataset_database"]("DATASET_1", settings["BACKEND"], setup=True)
     receipts = namespace["DATASET_RECEIPTS"]
     with engine.begin() as connection:
         namespace["DATASET_METADATA"].create_all(connection)
         connection.exec_driver_sql("ALTER TABLE superstep_dataset_receipts DROP COLUMN created")
+        connection.exec_driver_sql("ALTER TABLE superstep_dataset_rows DROP COLUMN formula_errors")
         connection.execute(namespace["DATASET_DEFINITIONS"].insert().values(
             dataset_id=did, contract=namespace["dataset_contract"]("DATASET_1"),
+        ))
+        legacy_rows = sa.Table("superstep_dataset_rows", sa.MetaData(), autoload_with=connection)
+        connection.execute(legacy_rows.insert().values(
+            dataset_id=did, id="kept", values={"ticket": "Original"}, revision=3, created=1, updated=2,
         ))
         legacy = sa.Table(receipts.name, sa.MetaData(), autoload_with=connection)
         connection.execute(legacy.insert().values(
             dataset_id=did, operation_id="old", fingerprint="x",
             result={"row": {"id": "gone", "revision": 1, "values": {"ticket": "private"}}, "inserted": True},
         ))
-    namespace["setup_datasets"](create=True)
+    with pytest.raises(RuntimeError, match="DATASET_SETUP_REQUIRED"):
+        namespace["setup_datasets"](create=False)
+    for _ in range(2):
+        namespace["setup_datasets"](create=True)
+    preserved = namespace["dataset_standalone"]("DATASET_1", settings["BACKEND"], "get_row", ["ticket"], {"row_id": "kept"}, None)
+    assert preserved == {"id": "kept", "values": {"ticket": "Original"}, "revision": 3, "created": 1, "updated": 2}
     with engine.begin() as connection:
+        assert "formula_errors" in {column["name"] for column in sa.inspect(connection).get_columns("superstep_dataset_rows")}
         assert connection.scalar(sa.select(receipts.c.result)) == {"row_id": "gone", "revision": 1, "inserted": True}
         connection.execute(receipts.update().values(created=1))
     namespace["dataset_standalone"]("DATASET_1", settings["BACKEND"], "insert_row", [],
